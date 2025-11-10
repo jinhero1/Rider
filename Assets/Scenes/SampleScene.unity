@@ -429,7 +429,7 @@ WheelJoint2D:
   m_UseMotor: 0
   m_Motor:
     m_MotorSpeed: 0
-    m_MaximumMotorForce: 500
+    m_MaximumMotorForce: 1500
 --- !u!58 &106791971
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -626,8 +626,8 @@ MonoBehaviour:
   rearWheel: {fileID: 615027989}
   frontWheel: {fileID: 106791970}
   bikeBody: {fileID: 361318604}
-  motorTorque: 500
-  maxSpeed: 20
+  motorTorque: 1500
+  maxSpeed: 60
   airRotationSpeed: 200
   crashDetector: {fileID: 0}
   crashAngleThreshold: 120
@@ -1154,7 +1154,7 @@ WheelJoint2D:
   m_UseMotor: 1
   m_Motor:
     m_MotorSpeed: 0
-    m_MaximumMotorForce: 500
+    m_MaximumMotorForce: 1500
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
