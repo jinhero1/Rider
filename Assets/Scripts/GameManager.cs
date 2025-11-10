@@ -93,15 +93,42 @@ public class GameManager : MonoBehaviour
 
     public void OnLevelComplete()
     {
-        if (currentState == GameState.Completed) return;
+        Debug.Log($"[GameManager] >>> OnLevelComplete() called at time: {levelTime:F2}s");
+        Debug.Log($"[GameManager]     Current State: {currentState}");
         
+        if (currentState == GameState.Completed)
+        {
+            Debug.Log("[GameManager] Already completed, returning");
+            return;
+        }
+        
+        Debug.Log("[GameManager] Setting state to Completed...");
         currentState = GameState.Completed;
+        Debug.Log($"[GameManager] State changed to: {currentState}");
+        
+        // Stop bike immediately
+        if (bikeController != null)
+        {
+            bikeController.StopBike();
+            Debug.Log("[GameManager] Bike stopped");
+        }
         
         // Calculate stars
         int stars = CalculateStars();
+        Debug.Log($"[GameManager] Stars calculated: {stars} (Time: {levelTime:F2}s)");
         
         // Show completion UI
-        uiManager?.ShowLevelComplete(levelTime, stars);
+        if (uiManager != null)
+        {
+            Debug.Log("[GameManager] Calling UIManager.ShowLevelComplete()...");
+            uiManager.ShowLevelComplete(levelTime, stars);
+            Debug.Log("[GameManager] ✓ Level complete UI should be visible now");
+        }
+        else
+        {
+            Debug.LogError("[GameManager] UIManager is NULL! Cannot show completion screen");
+            Debug.LogError("  → Assign UIManager in GameManager Inspector");
+        }
     }
 
     int CalculateStars()

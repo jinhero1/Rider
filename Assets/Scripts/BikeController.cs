@@ -60,6 +60,13 @@ public class BikeController : MonoBehaviour
     {
         if (isCrashed) return;
         
+        // Check if level is completed - stop accepting input
+        if (GameManager.Instance != null && GameManager.Instance.currentState == GameState.Completed)
+        {
+            isAccelerating = false;
+            return;
+        }
+        
         // Detect input (touch or spacebar/mouse)
         if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space))
         {
@@ -189,6 +196,15 @@ public class BikeController : MonoBehaviour
         {
             isGrounded = false;
         }
+    }
+    
+    public void StopBike()
+    {
+        // Stop all input
+        isAccelerating = false;
+        
+        // Gradually stop the bike (more realistic)
+        bikeBody.linearVelocity *= 0.5f;
     }
 
     public void ResetBike()
