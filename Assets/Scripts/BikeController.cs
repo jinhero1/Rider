@@ -66,7 +66,7 @@ public class BikeController : MonoBehaviour
         // Apply motor torque
         if (isAccelerating)
         {
-            motor.motorSpeed = -maxSpeed; // Negative value means forward
+            motor.motorSpeed = maxSpeed;
             motor.maxMotorTorque = motorTorque;
         }
         else
