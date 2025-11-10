@@ -20,10 +20,6 @@ public class BikeController : MonoBehaviour
     [SerializeField] private float forwardForce = 100f;  // Extra horizontal push
     [SerializeField] private float speedMultiplier = 1.5f;
     
-    [Header("Collision Detection")]
-    [SerializeField] private Transform crashDetector;
-    [SerializeField] private float crashAngleThreshold = 120f;
-    
     [Header("Status")]
     public bool isGrounded = false;
     public bool isCrashed = false;
@@ -88,9 +84,6 @@ public class BikeController : MonoBehaviour
         
         // Detect flips
         DetectFlips();
-        
-        // Check crash
-        CheckCrash();
     }
 
     void FixedUpdate()
@@ -160,17 +153,6 @@ public class BikeController : MonoBehaviour
         lastRotation = currentRotation;
     }
 
-    void CheckCrash()
-    {
-        float angle = Mathf.Abs(bikeBody.rotation % 360f);
-        if (angle > 180f) angle = 360f - angle;
-        
-        if (isGrounded && angle > crashAngleThreshold)
-        {
-            Crash();
-        }
-    }
-
     public void Crash()
     {
         if (isCrashed) return;
@@ -202,7 +184,7 @@ public class BikeController : MonoBehaviour
     {
         // Stop all input
         isAccelerating = false;
-        
+
         // Gradually stop the bike (more realistic)
         bikeBody.linearVelocity *= 0.5f;
     }

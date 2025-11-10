@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6474748367704978873}
   - component: {fileID: 7691930433731731997}
   - component: {fileID: 6712137502190427870}
+  - component: {fileID: -7639933540786568453}
   m_Layer: 0
   m_Name: FlipEffect
   m_TagString: Untagged
@@ -4833,3 +4834,15 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!114 &-7639933540786568453
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8762901306220990651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54a46c14ad9e940498fb0eede37cca79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
