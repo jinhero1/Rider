@@ -730,6 +730,9 @@ MonoBehaviour:
   flipCount: 0
   showDebugInfo: 0
   currentSpeed: 0
+  detectBothDirections: 1
+  flipThreshold: 320
+  showFlipDebug: 1
 --- !u!1 &368028446
 GameObject:
   m_ObjectHideFlags: 0
@@ -3525,7 +3528,6 @@ MonoBehaviour:
   boostDirection: {x: 1, y: 0}
   normalizeDirection: 1
   boostType: 0
-  boostDuration: 0.5
   platformColor: {r: 0, g: 1, b: 0, a: 1}
   showArrow: 1
   arrowScale: 1

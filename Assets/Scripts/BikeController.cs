@@ -28,10 +28,17 @@ public class BikeController : MonoBehaviour
     [Header("Debug Info")]
     [SerializeField] private bool showDebugInfo = true;
     public float currentSpeed = 0f;
-    
+
+    [Header("Flip Detection")]
+    [SerializeField] private bool detectBothDirections = true;
+    [SerializeField] private float flipThreshold = 320f;
+    [SerializeField] private bool showFlipDebug = true;
+
+    private float accumulatedRotation = 0f;
+    private float lastFrameRotation = 0f;
+    private bool wasGrounded = true;
+
     private bool isAccelerating = false;
-    private float currentRotation = 0f;
-    private float lastRotation = 0f;
     private JointMotor2D motor;
     private Rigidbody2D rearWheelRB;
 
@@ -45,9 +52,11 @@ public class BikeController : MonoBehaviour
         
         // Get rear wheel rigidbody
         rearWheelRB = rearWheel.GetComponent<Rigidbody2D>();
-        
+
         // Optimize center of mass for stability
         bikeBody.centerOfMass = new Vector2(0, -0.15f);
+        
+        lastFrameRotation = bikeBody.rotation;
         
         Debug.Log($"Bike Controller Initialized - Motor Torque: {motorTorque}, Max Speed: {maxSpeed}");
     }
@@ -141,16 +150,52 @@ public class BikeController : MonoBehaviour
 
     void DetectFlips()
     {
-        currentRotation = bikeBody.rotation;
-        float rotationDelta = currentRotation - lastRotation;
-        
-        if (Mathf.Abs(rotationDelta) > 350f && !isGrounded)
+        float currentRot = bikeBody.rotation;
+
+        float delta = Mathf.DeltaAngle(lastFrameRotation, currentRot);
+
+        if (!isGrounded)
         {
-            flipCount++;
-            GameManager.Instance?.OnFlipCompleted();
+            if (detectBothDirections)
+            {
+                accumulatedRotation += Mathf.Abs(delta);
+
+                if (showFlipDebug && accumulatedRotation > 90f)
+                {
+                    Debug.Log($"[Flip Progress] {accumulatedRotation:F0}° / {flipThreshold}°");
+                }
+            }
+
+            if (accumulatedRotation >= flipThreshold)
+            {
+                flipCount++;
+                GameManager.Instance?.OnFlipCompleted();
+
+                Debug.Log($"<color=yellow>★★★ FLIP COMPLETED! ★★★ Total Flips: {flipCount}</color>");
+
+                accumulatedRotation -= 360f;
+
+                if (accumulatedRotation < 0)
+                {
+                    accumulatedRotation = 0;
+                }
+            }
+        }
+        else
+        {
+            if (!wasGrounded)
+            {
+                if (accumulatedRotation > 100f && showFlipDebug)
+                {
+                    Debug.Log($"[Flip Incomplete] Landed with {accumulatedRotation:F0}° rotation");
+                }
+
+                accumulatedRotation = 0f;
+            }
         }
         
-        lastRotation = currentRotation;
+        lastFrameRotation = currentRot;
+        wasGrounded = isGrounded;
     }
 
     public void Crash()
