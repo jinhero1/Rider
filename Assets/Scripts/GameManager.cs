@@ -71,7 +71,7 @@ public class GameManager : MonoBehaviour
             Instantiate(flipEffectPrefab, bikeController.transform.position, Quaternion.identity);
         }
         
-        uiManager?.ShowFlipMessage();
+        uiManager?.ShowFlipMessage(bikeController.flipCount);
     }
 
     public void OnCrash()

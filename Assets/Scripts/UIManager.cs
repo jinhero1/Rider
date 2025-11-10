@@ -60,11 +60,11 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void ShowFlipMessage()
+    public void ShowFlipMessage(int flipCount)
     {
         if (flipMessageText != null)
         {
-            flipMessageText.text = "FLIP!";
+            flipMessageText.text = $"FLIP +{flipCount}!";
             flipMessageText.gameObject.SetActive(true);
             flipMessageTimer = 1f;
         }
