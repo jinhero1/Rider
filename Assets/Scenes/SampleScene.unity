@@ -429,7 +429,7 @@ WheelJoint2D:
   m_UseMotor: 0
   m_Motor:
     m_MotorSpeed: 0
-    m_MaximumMotorForce: 1500
+    m_MaximumMotorForce: 500
 --- !u!58 &106791971
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -558,7 +558,7 @@ GameObject:
   m_Component:
   - component: {fileID: 361318603}
   - component: {fileID: 361318604}
-  - component: {fileID: 361318605}
+  - component: {fileID: 361318606}
   m_Layer: 6
   m_Name: Bike
   m_TagString: Player
@@ -611,7 +611,7 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!114 &361318605
+--- !u!114 &361318606
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -620,20 +620,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 361318602}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49e84230b75b8475782980c28276f965, type: 3}
+  m_Script: {fileID: 11500000, guid: a2038bcc55a134d7089b8de770f54552, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   rearWheel: {fileID: 615027989}
   frontWheel: {fileID: 106791970}
   bikeBody: {fileID: 361318604}
-  motorTorque: 1500
-  maxSpeed: 60
+  motorTorque: 500
+  maxSpeed: 10
   airRotationSpeed: 200
+  useAdditionalForce: 1
+  forwardForce: 11
+  speedMultiplier: 1
   crashDetector: {fileID: 0}
   crashAngleThreshold: 120
   isGrounded: 0
   isCrashed: 0
   flipCount: 0
+  showDebugInfo: 1
+  currentSpeed: 0
 --- !u!1 &368028446
 GameObject:
   m_ObjectHideFlags: 0
@@ -667,11 +672,11 @@ MonoBehaviour:
   levelTime: 0
   threeStarTime: 12
   twoStarTime: 20
-  bikeController: {fileID: 361318605}
+  bikeController: {fileID: 361318606}
   uiManager: {fileID: 999539611}
   startPosition: {x: 0, y: 0, z: 0}
-  crashEffectPrefab: {fileID: 0}
-  flipEffectPrefab: {fileID: 0}
+  crashEffectPrefab: {fileID: 6588813807815463331, guid: d3dbe394f16bb400dac673060c71661e, type: 3}
+  flipEffectPrefab: {fileID: 8762901306220990651, guid: 7adfaa548bc464cb5be047ebce5b3815, type: 3}
 --- !u!4 &368028448
 Transform:
   m_ObjectHideFlags: 0
@@ -1154,7 +1159,7 @@ WheelJoint2D:
   m_UseMotor: 1
   m_Motor:
     m_MotorSpeed: 0
-    m_MaximumMotorForce: 1500
+    m_MaximumMotorForce: 500
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1796,7 +1801,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &999539607
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1829,7 +1834,7 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1920, y: 1080}
+  m_ReferenceResolution: {x: 1080, y: 1920}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
