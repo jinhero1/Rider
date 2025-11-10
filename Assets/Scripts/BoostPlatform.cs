@@ -12,7 +12,6 @@ public class BoostPlatform : MonoBehaviour
     
     [Header("Boost Type")]
     [SerializeField] private BoostType boostType = BoostType.Impulse;
-    [SerializeField] private float boostDuration = 0.5f; // For continuous boost
     
     [Header("Visual Feedback")]
     [SerializeField] private Color platformColor = Color.green;
