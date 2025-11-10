@@ -191,20 +191,26 @@ public class BikeController : MonoBehaviour
 
     public void ResetBike()
     {
+        gameObject.SetActive(true);
         isCrashed = false;
         flipCount = 0;
         bikeBody.linearVelocity = Vector2.zero;
         bikeBody.angularVelocity = 0f;
         bikeBody.rotation = 0f;
-        
+
         if (rearWheelRB != null)
         {
             rearWheelRB.linearVelocity = Vector2.zero;
             rearWheelRB.angularVelocity = 0f;
         }
-        
+
         transform.position = GameManager.Instance.startPosition;
         transform.rotation = Quaternion.identity;
+    }
+    
+    public void HideBike()
+    {
+        gameObject.SetActive(false);
     }
     
     // Visualize speed in Scene view

@@ -77,18 +77,19 @@ public class GameManager : MonoBehaviour
     public void OnCrash()
     {
         currentState = GameState.Crashed;
-        
+
         // Play crash effect
         if (crashEffectPrefab != null)
         {
             Instantiate(crashEffectPrefab, bikeController.transform.position, Quaternion.identity);
         }
-        
+
+        bikeController.HideBike();
+
         // Screen shake
         CameraShake.Instance?.Shake(0.3f, 0.3f);
         
-        // Delayed restart
-        Invoke(nameof(RestartLevel), 0.5f);
+        uiManager?.ShowLevelFail(levelTime);
     }
 
     public void OnLevelComplete()
@@ -147,7 +148,7 @@ public class GameManager : MonoBehaviour
         levelTime = 0f;
         currentState = GameState.Playing;
         bikeController.ResetBike();
-        uiManager?.HideLevelComplete();
+        uiManager?.HideLevelResult();
     }
 
     public void ReloadScene()

@@ -10,9 +10,10 @@ public class UIManager : MonoBehaviour
     [Header("In-Game UI")]
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private TextMeshProUGUI flipMessageText;
-    
+
     [Header("Completion Screen")]
     [SerializeField] private GameObject levelCompletePanel;
+    [SerializeField] private GameObject levelFailPanel;
     [SerializeField] private TextMeshProUGUI finalTimeText;
     [SerializeField] private GameObject[] stars; // 3 star objects
     [SerializeField] private Button retryButton;
@@ -24,6 +25,8 @@ public class UIManager : MonoBehaviour
     {
         if (levelCompletePanel != null)
             levelCompletePanel.SetActive(false);
+        if (levelFailPanel != null)
+            levelFailPanel.SetActive(false);
             
         if (flipMessageText != null)
             flipMessageText.gameObject.SetActive(false);
@@ -67,18 +70,23 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private void ShowFinalTimeText(float finalTime)
+    {
+        if (finalTimeText != null)
+        {
+            finalTimeText.text = $"Time: {finalTime:F2}s";
+        }        
+    }
+
     public void ShowLevelComplete(float finalTime, int starCount)
     {
         if (levelCompletePanel != null)
         {
             levelCompletePanel.SetActive(true);
         }
-        
-        if (finalTimeText != null)
-        {
-            finalTimeText.text = $"Time: {finalTime:F2}s";
-        }
-        
+
+        ShowFinalTimeText(finalTime);        
+
         // Display stars
         for (int i = 0; i < stars.Length; i++)
         {
@@ -88,12 +96,27 @@ public class UIManager : MonoBehaviour
             }
         }
     }
+    
+    public void ShowLevelFail(float finalTime)
+    {
+        if (levelFailPanel != null)
+        {
+            levelFailPanel.SetActive(true);
+        }
 
-    public void HideLevelComplete()
+        ShowFinalTimeText(finalTime); 
+    }
+
+    public void HideLevelResult()
     {
         if (levelCompletePanel != null)
         {
             levelCompletePanel.SetActive(false);
+        }
+
+        if (levelFailPanel != null)
+        {
+            levelFailPanel.SetActive(false);
         }
     }
 }
