@@ -263,6 +263,12 @@ public class BikeController : MonoBehaviour
         return Mathf.FloorToInt(totalDistance * distanceMultiplier);
     }
 
+    public void AddFlipBonus(int bonusPoints)
+    {
+        totalDistance += bonusPoints;
+        Debug.Log($"[Bike] Flip bonus added: +{bonusPoints}, Total distance: {totalDistance:F1}");
+    }
+
     public void ResetBike()
     {
         gameObject.SetActive(true);
@@ -272,6 +278,8 @@ public class BikeController : MonoBehaviour
         bikeBody.angularVelocity = 0f;
         bikeBody.rotation = 0f;
         totalDistance = 0f;
+        accumulatedRotation = 0f;
+        
         lastPosition = transform.position;
 
         if (rearWheelRB != null)

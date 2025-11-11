@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Score System")]
     public int highScore = 0;
+    public int flipBonusPoints = 1;
 
     private bool levelStarted = false;
 
@@ -70,8 +71,12 @@ public class GameManager : MonoBehaviour
         {
             Instantiate(flipEffectPrefab, bikeController.transform.position, Quaternion.identity);
         }
+
+        bikeController.AddFlipBonus(flipBonusPoints);
         
-        uiManager?.ShowFlipMessage(bikeController.flipCount);
+        uiManager?.ShowFlipMessage(flipBonusPoints);
+
+        Debug.Log($"[GameManager] Flip completed! Bonus: +{flipBonusPoints}");
     }
 
     public void OnCrash()
