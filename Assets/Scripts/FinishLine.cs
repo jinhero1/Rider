@@ -140,6 +140,19 @@ public class FinishLine : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reset the finish line state for level restart
+    /// </summary>
+    public void ResetFinishLine()
+    {
+        hasTriggered = false;
+        
+        if (showDebugInfo)
+        {
+            Debug.Log("[FinishLine] ✓ Finish line reset - ready to trigger again");
+        }
+    }
+
     // Visualize finish line in Scene view
     void OnDrawGizmos()
     {

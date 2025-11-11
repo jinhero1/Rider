@@ -1397,6 +1397,7 @@ MonoBehaviour:
   currentState: 0
   bikeController: {fileID: 361318606}
   uiManager: {fileID: 999539611}
+  finishLine: {fileID: 624027799}
   startPosition: {x: 0, y: 0, z: 0}
   crashEffectPrefab: {fileID: 6588813807815463331, guid: d3dbe394f16bb400dac673060c71661e, type: 3}
   flipEffectPrefab: {fileID: 8762901306220990651, guid: 7adfaa548bc464cb5be047ebce5b3815, type: 3}

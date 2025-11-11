@@ -14,6 +14,7 @@ public class GameManager : MonoBehaviour
     [Header("References")]
     public BikeController bikeController;
     public UIManager uiManager;
+    public FinishLine finishLine;
     public Vector3 startPosition;
     
     [Header("Effects")]
@@ -167,6 +168,7 @@ public class GameManager : MonoBehaviour
         currentState = GameState.Playing;
         bikeController.ResetBike();
         uiManager?.HideLevelResult();
+        finishLine?.ResetFinishLine();
         
         // Reset collectibles (they will reappear, but collected count persists)
         if (CollectibleManager.Instance != null)
