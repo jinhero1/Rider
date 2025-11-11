@@ -8,14 +8,13 @@ using TMPro;
 public class UIManager : MonoBehaviour
 {
     [Header("In-Game UI")]
-    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI flipMessageText;
 
     [Header("Completion Screen")]
     [SerializeField] private GameObject levelCompletePanel;
     [SerializeField] private GameObject levelFailPanel;
-    [SerializeField] private TextMeshProUGUI finalTimeText;
-    [SerializeField] private GameObject[] stars; // 3 star objects
+    [SerializeField] private TextMeshProUGUI finalScoreText;
     [SerializeField] private Button retryButton;
     [SerializeField] private Button nextButton;
     
@@ -52,11 +51,11 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void UpdateTimer(float time)
+    public void UpdateScore(int score)
     {
-        if (timerText != null)
+        if (scoreText != null)
         {
-            timerText.text = $"Time: {time:F2}s";
+            scoreText.text = score.ToString();
         }
     }
 
@@ -70,41 +69,32 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    private void ShowFinalTimeText(float finalTime)
+    private void ShowFinalScoreText(int score)
     {
-        if (finalTimeText != null)
+        if (finalScoreText != null)
         {
-            finalTimeText.text = $"Time: {finalTime:F2}s";
-        }        
+            finalScoreText.text = score.ToString();
+        }
     }
 
-    public void ShowLevelComplete(float finalTime, int starCount)
+    public void ShowLevelComplete(int score)
     {
         if (levelCompletePanel != null)
         {
             levelCompletePanel.SetActive(true);
         }
 
-        ShowFinalTimeText(finalTime);        
-
-        // Display stars
-        for (int i = 0; i < stars.Length; i++)
-        {
-            if (stars[i] != null)
-            {
-                stars[i].SetActive(i < starCount);
-            }
-        }
+        ShowFinalScoreText(score);
     }
     
-    public void ShowLevelFail(float finalTime)
+    public void ShowLevelFail(int score)
     {
         if (levelFailPanel != null)
         {
             levelFailPanel.SetActive(true);
         }
 
-        ShowFinalTimeText(finalTime); 
+        ShowFinalScoreText(score);
     }
 
     public void HideLevelResult()

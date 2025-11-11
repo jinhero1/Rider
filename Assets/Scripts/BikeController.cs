@@ -34,6 +34,14 @@ public class BikeController : MonoBehaviour
     [SerializeField] private float flipThreshold = 320f;
     [SerializeField] private bool showFlipDebug = true;
 
+    [Header("Distance Tracking")]
+    [SerializeField] private bool trackDistance = true;
+    [SerializeField] private float distanceMultiplier = 1f;
+
+    private float totalDistance = 0f;
+    private Vector3 lastPosition;
+    private bool distanceInitialized = false;
+
     private float accumulatedRotation = 0f;
     private float lastFrameRotation = 0f;
     private bool wasGrounded = true;
@@ -55,7 +63,11 @@ public class BikeController : MonoBehaviour
 
         // Optimize center of mass for stability
         bikeBody.centerOfMass = new Vector2(0, -0.15f);
-        
+
+        lastPosition = transform.position;
+        distanceInitialized = true;
+        totalDistance = 0f;
+
         lastFrameRotation = bikeBody.rotation;
         
         Debug.Log($"Bike Controller Initialized - Motor Torque: {motorTorque}, Max Speed: {maxSpeed}");
@@ -90,9 +102,21 @@ public class BikeController : MonoBehaviour
         {
             Debug.Log($"Speed: {currentSpeed:F2} | Motor Speed: {motor.motorSpeed} | Grounded: {isGrounded}");
         }
-        
+
         // Detect flips
         DetectFlips();
+
+        if (trackDistance && distanceInitialized && !isCrashed)
+        {
+            float deltaDistance = Vector3.Distance(transform.position, lastPosition);
+
+            if (transform.position.x > lastPosition.x)
+            {
+                totalDistance += deltaDistance;
+            }
+
+            lastPosition = transform.position;
+        }
     }
 
     void FixedUpdate()
@@ -224,7 +248,7 @@ public class BikeController : MonoBehaviour
             isGrounded = false;
         }
     }
-    
+
     public void StopBike()
     {
         // Stop all input
@@ -232,6 +256,11 @@ public class BikeController : MonoBehaviour
 
         // Gradually stop the bike (more realistic)
         bikeBody.linearVelocity *= 0.5f;
+    }
+
+    public int GetScore()
+    {
+        return Mathf.FloorToInt(totalDistance * distanceMultiplier);
     }
 
     public void ResetBike()
@@ -242,6 +271,8 @@ public class BikeController : MonoBehaviour
         bikeBody.linearVelocity = Vector2.zero;
         bikeBody.angularVelocity = 0f;
         bikeBody.rotation = 0f;
+        totalDistance = 0f;
+        lastPosition = transform.position;
 
         if (rearWheelRB != null)
         {

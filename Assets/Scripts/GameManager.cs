@@ -11,11 +11,6 @@ public class GameManager : MonoBehaviour
     [Header("Game State")]
     public GameState currentState = GameState.Playing;
     
-    [Header("Timer")]
-    public float levelTime = 0f;
-    public float threeStarTime = 12f;  // 3-star time threshold
-    public float twoStarTime = 20f;    // 2-star time threshold
-    
     [Header("References")]
     public BikeController bikeController;
     public UIManager uiManager;
@@ -52,8 +47,7 @@ public class GameManager : MonoBehaviour
         // Update timer
         if (currentState == GameState.Playing && levelStarted)
         {
-            levelTime += Time.deltaTime;
-            uiManager?.UpdateTimer(levelTime);
+            uiManager?.UpdateScore(bikeController.GetScore());
         }
         
         // Restart hotkey
@@ -89,12 +83,11 @@ public class GameManager : MonoBehaviour
         // Screen shake
         CameraShake.Instance?.Shake(0.3f, 0.3f);
         
-        uiManager?.ShowLevelFail(levelTime);
+        uiManager?.ShowLevelFail(bikeController.GetScore());
     }
 
     public void OnLevelComplete()
     {
-        Debug.Log($"[GameManager] >>> OnLevelComplete() called at time: {levelTime:F2}s");
         Debug.Log($"[GameManager]     Current State: {currentState}");
         
         if (currentState == GameState.Completed)
@@ -114,15 +107,11 @@ public class GameManager : MonoBehaviour
             Debug.Log("[GameManager] Bike stopped");
         }
         
-        // Calculate stars
-        int stars = CalculateStars();
-        Debug.Log($"[GameManager] Stars calculated: {stars} (Time: {levelTime:F2}s)");
-        
         // Show completion UI
         if (uiManager != null)
         {
             Debug.Log("[GameManager] Calling UIManager.ShowLevelComplete()...");
-            uiManager.ShowLevelComplete(levelTime, stars);
+            uiManager.ShowLevelComplete(bikeController.GetScore());
             Debug.Log("[GameManager] ✓ Level complete UI should be visible now");
         }
         else
@@ -132,20 +121,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    int CalculateStars()
-    {
-        if (levelTime <= threeStarTime)
-            return 3;
-        else if (levelTime <= twoStarTime)
-            return 2;
-        else
-            return 1;
-    }
-
     public void RestartLevel()
     {
         CancelInvoke();
-        levelTime = 0f;
         currentState = GameState.Playing;
         bikeController.ResetBike();
         uiManager?.HideLevelResult();
