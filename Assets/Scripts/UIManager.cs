@@ -12,30 +12,23 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI flipMessageText;
 
     [Header("Completion Screen")]
-    [SerializeField] private GameObject levelCompletePanel;
-    [SerializeField] private GameObject levelFailPanel;
+    [SerializeField] private GameObject levelResultPanel;
     [SerializeField] private TextMeshProUGUI finalScoreText;
-    [SerializeField] private Button retryButton;
     [SerializeField] private Button nextButton;
     
     private float flipMessageTimer = 0f;
 
     void Start()
     {
-        if (levelCompletePanel != null)
-            levelCompletePanel.SetActive(false);
-        if (levelFailPanel != null)
-            levelFailPanel.SetActive(false);
+        if (levelResultPanel != null)
+            levelResultPanel.SetActive(false);
             
         if (flipMessageText != null)
             flipMessageText.gameObject.SetActive(false);
             
-        // Setup button events
-        if (retryButton != null)
-            retryButton.onClick.AddListener(() => GameManager.Instance?.RestartLevel());
-            
+        // Setup button events            
         if (nextButton != null)
-            nextButton.onClick.AddListener(() => Debug.Log("Next Level"));
+            nextButton.onClick.AddListener(() => GameManager.Instance?.RestartLevel());
     }
 
     void Update()
@@ -73,25 +66,15 @@ public class UIManager : MonoBehaviour
     {
         if (finalScoreText != null)
         {
-            finalScoreText.text = score.ToString();
+            finalScoreText.text = $"Best Score\n{score}";
         }
     }
 
-    public void ShowLevelComplete(int score)
+    public void ShowLevelResult(int score)
     {
-        if (levelCompletePanel != null)
+        if (levelResultPanel != null)
         {
-            levelCompletePanel.SetActive(true);
-        }
-
-        ShowFinalScoreText(score);
-    }
-    
-    public void ShowLevelFail(int score)
-    {
-        if (levelFailPanel != null)
-        {
-            levelFailPanel.SetActive(true);
+            levelResultPanel.SetActive(true);
         }
 
         ShowFinalScoreText(score);
@@ -99,14 +82,9 @@ public class UIManager : MonoBehaviour
 
     public void HideLevelResult()
     {
-        if (levelCompletePanel != null)
+        if (levelResultPanel != null)
         {
-            levelCompletePanel.SetActive(false);
-        }
-
-        if (levelFailPanel != null)
-        {
-            levelFailPanel.SetActive(false);
+            levelResultPanel.SetActive(false);
         }
     }
 }

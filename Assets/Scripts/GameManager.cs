@@ -19,7 +19,10 @@ public class GameManager : MonoBehaviour
     [Header("Effects")]
     public GameObject crashEffectPrefab;
     public GameObject flipEffectPrefab;
-    
+
+    [Header("Score System")]
+    public int highScore = 0;
+
     private bool levelStarted = false;
 
     void Awake()
@@ -40,6 +43,9 @@ public class GameManager : MonoBehaviour
         startPosition = bikeController.transform.position;
         currentState = GameState.Playing;
         levelStarted = true;
+        
+        highScore = PlayerPrefs.GetInt("HighScore", 0);
+        Debug.Log($"[GameManager] High Score: {highScore}");
     }
 
     void Update()
@@ -47,7 +53,7 @@ public class GameManager : MonoBehaviour
         // Update timer
         if (currentState == GameState.Playing && levelStarted)
         {
-            uiManager?.UpdateScore(bikeController.GetScore());
+            uiManager?.UpdateScore(GetCurrentScore());
         }
         
         // Restart hotkey
@@ -82,8 +88,13 @@ public class GameManager : MonoBehaviour
 
         // Screen shake
         CameraShake.Instance?.Shake(0.3f, 0.3f);
-        
-        uiManager?.ShowLevelFail(bikeController.GetScore());
+
+        uiManager?.ShowLevelResult(highScore);
+    }
+    
+    private int GetCurrentScore()
+    {
+        return bikeController.GetScore();
     }
 
     public void OnLevelComplete()
@@ -110,8 +121,16 @@ public class GameManager : MonoBehaviour
         // Show completion UI
         if (uiManager != null)
         {
+            int currentScore = GetCurrentScore();
+            if (currentScore > highScore)
+            {
+                highScore = currentScore;
+                PlayerPrefs.SetInt("HighScore", highScore);
+                PlayerPrefs.Save();
+            }
+
             Debug.Log("[GameManager] Calling UIManager.ShowLevelComplete()...");
-            uiManager.ShowLevelComplete(bikeController.GetScore());
+            uiManager.ShowLevelResult(highScore);
             Debug.Log("[GameManager] ✓ Level complete UI should be visible now");
         }
         else
