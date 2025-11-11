@@ -85,14 +85,18 @@ public class Spike : MonoBehaviour
             if (hasTriggered) return;
             
             hasTriggered = true;
-            
+
             if (showDebug)
             {
                 Debug.Log($"[Spike] ⚠️ {collision.gameObject.name} hit spike {gameObject.name}!");
             }
-            
+
             // Get bike controller
             BikeController bike = collision.gameObject.GetComponent<BikeController>();
+            if (bike == null)
+            {
+                bike = collision.transform.parent?.GetComponent<BikeController>();
+            }
             
             if (bike != null)
             {
