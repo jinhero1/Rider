@@ -48,7 +48,7 @@ public class BonusLetterManager : MonoBehaviour
         // Auto-find all bonus letters in the scene
         if (autoFindLetters)
         {
-            BonusLetter[] foundLetters = FindObjectsOfType<BonusLetter>();
+            BonusLetter[] foundLetters = FindObjectsByType<BonusLetter>(FindObjectsSortMode.None);
             allLetters.Clear();
             allLetters.AddRange(foundLetters);
             

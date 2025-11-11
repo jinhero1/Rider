@@ -176,10 +176,16 @@ public class GameManager : MonoBehaviour
             CollectibleManager.Instance.ResetAllCollectibles();
         }
         
-        // Reset bonus letters (they will reappear, but collected status persists)
+        // Reset bonus letters (they will reappear)
         if (BonusLetterManager.Instance != null)
         {
             BonusLetterManager.Instance.ResetAllLetters();
+        }
+        
+        // Reset spikes (allow triggering again)
+        if (SpikeManager.Instance != null)
+        {
+            SpikeManager.Instance.ResetAllSpikes();
         }
     }
 

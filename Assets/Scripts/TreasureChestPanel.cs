@@ -11,8 +11,6 @@ public class TreasureChestPanel : MonoBehaviour
     [Header("Panel References")]
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Image chestImage;
-    [SerializeField] private TextMeshProUGUI titleText;
-    [SerializeField] private TextMeshProUGUI messageText;
     [SerializeField] private Button continueButton;
     
     [Header("Chest Animation")]
@@ -33,11 +31,6 @@ public class TreasureChestPanel : MonoBehaviour
     [SerializeField] private AudioClip chestOpenSound;
     [SerializeField] private AudioClip rewardSound;
     
-    [Header("Text Content")]
-    [SerializeField] private string titleTextContent = "BONUS WORD COMPLETED!";
-    [SerializeField] private string messageTextContent = "You collected all BONUS letters!";
-    [SerializeField] private string continueTextContent = "Continue";
-    
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
     
@@ -56,17 +49,6 @@ public class TreasureChestPanel : MonoBehaviour
         if (continueButton != null)
         {
             continueButton.onClick.AddListener(OnContinueClicked);
-        }
-        
-        // Set text content
-        if (titleText != null)
-        {
-            titleText.text = titleTextContent;
-        }
-        
-        if (messageText != null)
-        {
-            messageText.text = messageTextContent;
         }
         
         // Hide glow effect initially
