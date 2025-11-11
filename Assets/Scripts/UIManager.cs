@@ -200,16 +200,6 @@ public class UIManager : MonoBehaviour
         if (collectibleCountText != null)
         {
             collectibleCountText.text = collected.ToString();
-            
-            // Optional: Change color based on progress
-            if (collected >= total && total > 0)
-            {
-                collectibleCountText.color = Color.yellow; // All collected!
-            }
-            else
-            {
-                collectibleCountText.color = Color.white;
-            }
         }
     }
 }
