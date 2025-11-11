@@ -2349,8 +2349,6 @@ MonoBehaviour:
   autoFindCollectibles: 1
   totalCollectibles: 0
   collectedCount: 0
-  affectsScore: 0
-  pointsPerCollectible: 10
   showDebug: 1
 --- !u!4 &1462970286
 Transform:
@@ -3539,7 +3537,7 @@ GameObject:
   - component: {fileID: 2100992313}
   - component: {fileID: 2100992312}
   m_Layer: 5
-  m_Name: LevelCompletePanel
+  m_Name: LevelResultPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
