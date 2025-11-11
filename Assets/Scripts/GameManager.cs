@@ -123,25 +123,41 @@ public class GameManager : MonoBehaviour
             Debug.Log("[GameManager] Bike stopped");
         }
         
-        // Show completion UI
-        if (uiManager != null)
+        // Update high score
+        int currentScore = GetCurrentScore();
+        if (currentScore > highScore)
         {
-            int currentScore = GetCurrentScore();
-            if (currentScore > highScore)
+            highScore = currentScore;
+            PlayerPrefs.SetInt("HighScore", highScore);
+            PlayerPrefs.Save();
+        }
+        
+        // Check if we should show treasure chest first
+        if (BonusLetterManager.Instance != null && 
+            BonusLetterManager.Instance.ShouldShowTreasureChest())
+        {
+            Debug.Log("[GameManager] All BONUS letters collected! Showing treasure chest first...");
+            
+            // Show treasure chest, then show level result
+            if (uiManager != null)
             {
-                highScore = currentScore;
-                PlayerPrefs.SetInt("HighScore", highScore);
-                PlayerPrefs.Save();
+                uiManager.ShowTreasureChestThenResult(highScore);
             }
-
-            Debug.Log("[GameManager] Calling UIManager.ShowLevelComplete()...");
-            uiManager.ShowLevelResult(highScore);
-            Debug.Log("[GameManager] ✓ Level complete UI should be visible now");
         }
         else
         {
-            Debug.LogError("[GameManager] UIManager is NULL! Cannot show completion screen");
-            Debug.LogError("  → Assign UIManager in GameManager Inspector");
+            // No treasure chest, show level result directly
+            Debug.Log("[GameManager] Showing level result...");
+            if (uiManager != null)
+            {
+                uiManager.ShowLevelResult(highScore);
+                Debug.Log("[GameManager] ✓ Level complete UI should be visible now");
+            }
+            else
+            {
+                Debug.LogError("[GameManager] UIManager is NULL! Cannot show completion screen");
+                Debug.LogError("  → Assign UIManager in GameManager Inspector");
+            }
         }
     }
 
@@ -156,6 +172,12 @@ public class GameManager : MonoBehaviour
         if (CollectibleManager.Instance != null)
         {
             CollectibleManager.Instance.ResetAllCollectibles();
+        }
+        
+        // Reset bonus letters (they will reappear, but collected status persists)
+        if (BonusLetterManager.Instance != null)
+        {
+            BonusLetterManager.Instance.ResetAllLetters();
         }
     }
 

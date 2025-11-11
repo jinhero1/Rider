@@ -9,7 +9,12 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI flipMessageText;
     [SerializeField] private TextMeshProUGUI bonusScoreText;
-    [SerializeField] private TextMeshProUGUI collectibleCountText;
+    [SerializeField] private TextMeshProUGUI collectibleCountText;  // Diamond counter
+    
+    [Header("Bonus Letters UI")]
+    [SerializeField] private TextMeshProUGUI[] bonusLetterTexts = new TextMeshProUGUI[5]; // B, O, N, U, S
+    [SerializeField] private Color collectedLetterColor = Color.yellow;
+    [SerializeField] private Color uncollectedLetterColor = new Color(0.3f, 0.3f, 0.3f, 0.5f); // Gray
 
     [Header("Score Animation")]
     [SerializeField] private Color bonusColor = Color.yellow;
@@ -19,6 +24,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject levelResultPanel;
     [SerializeField] private TextMeshProUGUI finalScoreText;
     [SerializeField] private Button nextButton;
+    [SerializeField] private TreasureChestPanel treasureChestPanel;
     
     private float flipMessageTimer = 0f;
     private bool isAnimatingBonus = false;
@@ -40,6 +46,9 @@ public class UIManager : MonoBehaviour
         {
             collectibleCountText.text = "0";
         }
+        
+        // Initialize bonus letters display
+        InitializeBonusLetters();
             
         // Setup button events            
         if (nextButton != null)
@@ -199,7 +208,116 @@ public class UIManager : MonoBehaviour
     {
         if (collectibleCountText != null)
         {
-            collectibleCountText.text = collected.ToString();
+            collectibleCountText.text = $"{collected}";
+            
+            // Optional: Change color based on progress
+            if (collected >= total && total > 0)
+            {
+                collectibleCountText.color = Color.yellow; // All collected!
+            }
+            else
+            {
+                collectibleCountText.color = Color.white;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Initialize bonus letters display
+    /// </summary>
+    private void InitializeBonusLetters()
+    {
+        string[] letters = { "B", "O", "N", "U", "S" };
+        
+        for (int i = 0; i < bonusLetterTexts.Length; i++)
+        {
+            if (bonusLetterTexts[i] != null)
+            {
+                bonusLetterTexts[i].text = letters[i];
+                bonusLetterTexts[i].color = uncollectedLetterColor;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Update bonus letters display based on collected status
+    /// </summary>
+    public void UpdateBonusLetters(bool[] collectedLetters)
+    {
+        if (collectedLetters == null || collectedLetters.Length != 5) return;
+        
+        for (int i = 0; i < bonusLetterTexts.Length && i < collectedLetters.Length; i++)
+        {
+            if (bonusLetterTexts[i] != null)
+            {
+                bonusLetterTexts[i].color = collectedLetters[i] ? collectedLetterColor : uncollectedLetterColor;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Called when all BONUS letters are collected
+    /// </summary>
+    public void OnBonusWordCompleted()
+    {
+        Debug.Log("[UIManager] BONUS word completed!");
+        
+        // Optional: Play celebration animation for all letters
+        StartCoroutine(BonusWordCompletedAnimation());
+    }
+    
+    private IEnumerator BonusWordCompletedAnimation()
+    {
+        // Make all letters pulse
+        for (int i = 0; i < bonusLetterTexts.Length; i++)
+        {
+            if (bonusLetterTexts[i] != null)
+            {
+                StartCoroutine(LetterPulseAnimation(bonusLetterTexts[i]));
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+    }
+    
+    private IEnumerator LetterPulseAnimation(TextMeshProUGUI letterText)
+    {
+        Color originalColor = letterText.color;
+        
+        float elapsed = 0f;
+        float duration = 0.5f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            // Glow effect
+            letterText.color = Color.Lerp(originalColor, Color.white, Mathf.Sin(t * Mathf.PI * 2f));
+
+            yield return null;
+        }
+        
+        letterText.color = originalColor;
+    }
+    
+    /// <summary>
+    /// Show treasure chest then level result (called by GameManager)
+    /// </summary>
+    public void ShowTreasureChestThenResult(int score)
+    {
+        if (treasureChestPanel != null)
+        {
+            Debug.Log("[UIManager] Showing treasure chest panel...");
+            treasureChestPanel.ShowTreasureChest(() => {
+                // This callback is called when user clicks Continue on treasure chest
+                Debug.Log("[UIManager] Treasure chest continue clicked, showing level result...");
+                ShowLevelResult(score);
+            });
+        }
+        else
+        {
+            Debug.LogWarning("[UIManager] TreasureChestPanel is null! Showing level result directly.");
+            ShowLevelResult(score);
         }
     }
 }
