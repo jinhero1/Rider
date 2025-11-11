@@ -103,7 +103,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   instantCrash: 1
   targetTag: Player
-  spikeColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  spikeColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   showWarningGlow: 1
   glowSpeed: 2
   glowIntensity: 0.3
@@ -149,4 +149,4 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.5
+  m_Radius: 0.95
