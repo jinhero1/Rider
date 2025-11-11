@@ -151,6 +151,12 @@ public class GameManager : MonoBehaviour
         currentState = GameState.Playing;
         bikeController.ResetBike();
         uiManager?.HideLevelResult();
+        
+        // Reset collectibles (they will reappear, but collected count persists)
+        if (CollectibleManager.Instance != null)
+        {
+            CollectibleManager.Instance.ResetAllCollectibles();
+        }
     }
 
     public void ReloadScene()

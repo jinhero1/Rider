@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI flipMessageText;
     [SerializeField] private TextMeshProUGUI bonusScoreText;
+    [SerializeField] private TextMeshProUGUI collectibleCountText;
 
     [Header("Score Animation")]
     [SerializeField] private Color bonusColor = Color.yellow;
@@ -33,6 +34,12 @@ public class UIManager : MonoBehaviour
             
         if (bonusScoreText != null)
             bonusScoreText.gameObject.SetActive(false);
+        
+        // Initialize collectible counter
+        if (collectibleCountText != null)
+        {
+            collectibleCountText.text = "0";
+        }
             
         // Setup button events            
         if (nextButton != null)
@@ -183,5 +190,26 @@ public class UIManager : MonoBehaviour
         }
         
         currentDisplayScore = 0;
+    }
+
+    /// <summary>
+    /// Update the collectible counter display
+    /// </summary>
+    public void UpdateCollectibleCount(int collected, int total)
+    {
+        if (collectibleCountText != null)
+        {
+            collectibleCountText.text = collected.ToString();
+            
+            // Optional: Change color based on progress
+            if (collected >= total && total > 0)
+            {
+                collectibleCountText.color = Color.yellow; // All collected!
+            }
+            else
+            {
+                collectibleCountText.color = Color.white;
+            }
+        }
     }
 }
