@@ -17,10 +17,6 @@ public class CollectibleManager : MonoBehaviour
     [SerializeField] private int totalCollectibles = 0;
     [SerializeField] private int collectedCount = 0;
     
-    [Header("Track Support")]
-    [SerializeField] private bool supportDynamicTracks = true;
-    [SerializeField] private bool persistCollectedCount = true; // Keep collected count across track switches
-    
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
 
