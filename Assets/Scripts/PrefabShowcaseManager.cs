@@ -218,13 +218,23 @@ public class PrefabShowcaseManager : MonoBehaviour
         {
             finishLine.ResetFinishLine();
         }
-        
+
         // Refresh BONUS letters (find letters in new Track)
         if (BonusLetterManager.Instance != null)
         {
             BonusLetterManager.Instance.RefreshBonusLetters();
         }
-        
+
+        // Refresh Collectibles (find diamonds/coins in new Track)
+        if (CollectibleManager.Instance != null)
+        {
+            // Full reset collectibles when switching tracks
+            CollectibleManager.Instance.FullReset();
+
+            // Then refresh to find collectibles in new track
+            CollectibleManager.Instance.RefreshCollectibles();
+        }
+
         // Show track UI
         ShowTrackUI(track);
         
@@ -285,13 +295,23 @@ public class PrefabShowcaseManager : MonoBehaviour
         {
             finishLine.ResetFinishLine();
         }
-        
+
         // Refresh BONUS letters (find letters in new Track)
         if (BonusLetterManager.Instance != null)
         {
             BonusLetterManager.Instance.RefreshBonusLetters();
         }
-        
+
+        // Refresh Collectibles (find diamonds/coins in new Track)
+        if (CollectibleManager.Instance != null)
+        {
+            // Full reset collectibles when switching tracks
+            CollectibleManager.Instance.FullReset();
+
+            // Then refresh to find collectibles in new track
+            CollectibleManager.Instance.RefreshCollectibles();
+        }
+
         // Wait a frame for physics to settle
         yield return null;
         

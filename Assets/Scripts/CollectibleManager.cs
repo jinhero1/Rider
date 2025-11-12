@@ -1,8 +1,9 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
-/// Manages all collectible items in the level
+/// Manages all collectible items in the level with Track Prefab support
 /// </summary>
 public class CollectibleManager : MonoBehaviour
 {
@@ -15,6 +16,10 @@ public class CollectibleManager : MonoBehaviour
     [Header("Statistics")]
     [SerializeField] private int totalCollectibles = 0;
     [SerializeField] private int collectedCount = 0;
+    
+    [Header("Track Support")]
+    [SerializeField] private bool supportDynamicTracks = true;
+    [SerializeField] private bool persistCollectedCount = true; // Keep collected count across track switches
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
@@ -43,22 +48,14 @@ public class CollectibleManager : MonoBehaviour
         // Auto-find all collectibles in the scene if enabled
         if (autoFindCollectibles)
         {
-            Collectible[] foundCollectibles = FindObjectsByType<Collectible>(FindObjectsSortMode.None);
-            allCollectibles.Clear();
-            allCollectibles.AddRange(foundCollectibles);
-            
-            if (showDebug)
-            {
-                Debug.Log($"[CollectibleManager] Auto-found {foundCollectibles.Length} collectibles");
-            }
+            FindAllCollectibles();
         }
         
         totalCollectibles = allCollectibles.Count;
-        collectedCount = 0;
         
         if (showDebug)
         {
-            Debug.Log($"[CollectibleManager] Initialized with {totalCollectibles} collectibles");
+            Debug.Log($"[CollectibleManager] Initialized with {totalCollectibles} collectibles. Collected: {collectedCount}");
         }
         
         // Update UI
@@ -66,14 +63,67 @@ public class CollectibleManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Find all collectibles in the scene (including in Track Prefabs)
+    /// </summary>
+    private void FindAllCollectibles()
+    {
+        Collectible[] foundCollectibles = FindObjectsByType<Collectible>(FindObjectsSortMode.None);
+        allCollectibles.Clear();
+        allCollectibles.AddRange(foundCollectibles);
+        
+        if (showDebug)
+        {
+            Debug.Log($"[CollectibleManager] Found {foundCollectibles.Length} collectibles in scene");
+        }
+    }
+
+    /// <summary>
+    /// Refresh collectibles list (call after loading new Track)
+    /// </summary>
+    public void RefreshCollectibles()
+    {
+        if (autoFindCollectibles)
+        {
+            FindAllCollectibles();
+        }
+        
+        totalCollectibles = allCollectibles.Count;
+        
+        // Update UI
+        UpdateUI();
+        
+        if (showDebug)
+        {
+            Debug.Log($"[CollectibleManager] Refreshed. Total: {totalCollectibles}, Collected: {collectedCount}");
+        }
+    }
+
+    /// <summary>
     /// Called when a collectible is collected
     /// </summary>
     public void OnCollectibleCollected(Collectible collectible)
     {
+        if (collectible == null)
+        {
+            Debug.LogError("[CollectibleManager] OnCollectibleCollected called with NULL collectible!");
+            return;
+        }
+        
         if (!allCollectibles.Contains(collectible))
         {
-            Debug.LogWarning($"[CollectibleManager] Collected item not in list: {collectible.gameObject.name}");
-            return;
+            if (showDebug)
+            {
+                Debug.LogWarning($"[CollectibleManager] Collected item not in list: {collectible.gameObject.name}. Refreshing list...");
+            }
+            
+            // Refresh the list and try again
+            RefreshCollectibles();
+            
+            if (!allCollectibles.Contains(collectible))
+            {
+                Debug.LogError($"[CollectibleManager] Collectible {collectible.gameObject.name} still not found after refresh!");
+                return;
+            }
         }
         
         collectedCount++;
@@ -87,7 +137,7 @@ public class CollectibleManager : MonoBehaviour
         UpdateUI();
         
         // Check if all collected
-        if (collectedCount >= totalCollectibles)
+        if (collectedCount >= totalCollectibles && totalCollectibles > 0)
         {
             OnAllCollected();
         }
@@ -113,7 +163,7 @@ public class CollectibleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Reset all collectibles (for level restart)
+    /// Reset all collectibles (for level restart - keeps collected count)
     /// </summary>
     public void ResetAllCollectibles()
     {
@@ -125,8 +175,8 @@ public class CollectibleManager : MonoBehaviour
             }
         }
         
-        // Note: 根據需求，重新開始時不重置收集數
-        // collectedCount = 0;
+        // Note: Keep collected count for same level replay
+        // Don't reset collectedCount here
         
         if (showDebug)
         {
@@ -134,6 +184,32 @@ public class CollectibleManager : MonoBehaviour
         }
         
         UpdateUI();
+    }
+
+    /// <summary>
+    /// Full reset (clear collected count - for new level/track)
+    /// </summary>
+    public void FullReset()
+    {
+        // Clear collected count
+        collectedCount = 0;
+        
+        // Reset all collectibles
+        foreach (Collectible collectible in allCollectibles)
+        {
+            if (collectible != null)
+            {
+                collectible.ResetCollectible();
+            }
+        }
+        
+        // Update UI
+        UpdateUI();
+        
+        if (showDebug)
+        {
+            Debug.Log($"[CollectibleManager] Full reset complete. Total: {totalCollectibles}, Collected: 0");
+        }
     }
 
     /// <summary>
@@ -166,14 +242,26 @@ public class CollectibleManager : MonoBehaviour
     /// </summary>
     public bool AreAllCollected()
     {
-        return collectedCount >= totalCollectibles;
+        return totalCollectibles > 0 && collectedCount >= totalCollectibles;
     }
 
-    // Manual reset from Inspector for testing
+    // Manual controls from Inspector
+    [ContextMenu("Refresh Collectibles")]
+    public void ManualRefresh()
+    {
+        RefreshCollectibles();
+    }
+
     [ContextMenu("Reset All Collectibles")]
     public void ManualResetCollectibles()
     {
         ResetAllCollectibles();
+    }
+
+    [ContextMenu("Full Reset")]
+    public void ManualFullReset()
+    {
+        FullReset();
     }
 
     [ContextMenu("Collect All (Test)")]
@@ -221,6 +309,14 @@ public class CollectibleManager : MonoBehaviour
                 Gizmos.color = collectible.IsCollected() ? Color.gray : Color.green;
                 Gizmos.DrawWireSphere(collectible.transform.position, 0.3f);
             }
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
         }
     }
 }
