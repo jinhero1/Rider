@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 997f7e3978e1f48c58a7b5bbe2c4b051, type: 3}
+  m_Name: Track_01
+  m_EditorClassIdentifier: 
+  trackName: Track 1
+  trackTitle: Basic Movement
+  trackDescription: Learn to ride your bike!
+  trackPrefab: {fileID: 3262549044929534841, guid: 62f9e8d2ed4384ece954296b03ee8ebf, type: 3}
+  spawnPosition: {x: 0, y: 0, z: 0}

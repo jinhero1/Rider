@@ -188,6 +188,24 @@ public class GameManager : MonoBehaviour
             SpikeManager.Instance.ResetAllSpikes();
         }
     }
+    
+    /// <summary>
+    /// Load next level (for showcase mode)
+    /// </summary>
+    public void LoadNextLevel()
+    {
+        // Check for Prefab-based system first (faster)
+        if (PrefabShowcaseManager.Instance != null)
+        {
+            PrefabShowcaseManager.Instance.LoadNextTrack();
+        }
+        // Fallback to Scene-based system
+        else if (ShowcaseLevelManager.Instance != null)
+        {
+            ShowcaseLevelManager.Instance.LoadNextLevel();
+        }
+        RestartLevel();
+    }
 
     public void ReloadScene()
     {

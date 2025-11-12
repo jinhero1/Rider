@@ -52,7 +52,9 @@ public class UIManager : MonoBehaviour
             
         // Setup button events            
         if (nextButton != null)
-            nextButton.onClick.AddListener(() => GameManager.Instance?.RestartLevel());
+        {
+            nextButton.onClick.AddListener(() => GameManager.Instance?.LoadNextLevel());
+        }
     }
 
     void Update()
