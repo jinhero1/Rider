@@ -1,23 +1,49 @@
 using UnityEngine;
 
-/// <summary>
-/// Detects when player reaches the finish line
-/// </summary>
 public class FinishLine : MonoBehaviour
 {
+    private GameEventSystem eventSystem;
+    private IGameStateService gameStateService;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugInfo = true;
     [SerializeField] private Color gizmoColor = Color.green;
     
-    [Header("Status")]
-    [SerializeField] private bool hasTriggered = false;
-    [SerializeField] private int triggerAttempts = 0;
-    
+    private bool hasTriggered = false;
+    private int triggerAttempts = 0;
     private Collider2D myCollider;
 
-    void Start()
+    #region Initialization
+
+    private void Awake()
     {
-        // Validate setup
+        InitializeServices();
+    }
+
+    private void Start()
+    {
+        ValidateSetup();
+        SubscribeToEvents();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromEvents();
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+        gameStateService = ServiceLocator.Instance.Get<IGameStateService>();
+
+        if (eventSystem == null)
+        {
+            Debug.LogError("[FinishLine] GameEventSystem not found!");
+        }
+    }
+
+    private void ValidateSetup()
+    {
         myCollider = GetComponent<Collider2D>();
         
         if (myCollider == null)
@@ -26,14 +52,17 @@ public class FinishLine : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[FinishLine] Collider found: {myCollider.GetType().Name}");
+            if (showDebugInfo)
+            {
+                Debug.Log($"[FinishLine] Collider: {myCollider.GetType().Name}");
+            }
             
             if (!myCollider.isTrigger)
             {
                 Debug.LogError("[FinishLine] Collider is NOT set as Trigger!");
-                Debug.LogError("  → Fix: Select FinishLine → Check 'Is Trigger' in Collider2D");
+                Debug.LogError("  → Fix: Select FinishLine → Check 'Is Trigger'");
             }
-            else
+            else if (showDebugInfo)
             {
                 Debug.Log("[FinishLine] ✓ Collider is set as Trigger");
             }
@@ -41,26 +70,52 @@ public class FinishLine : MonoBehaviour
         
         if (showDebugInfo)
         {
-            Debug.Log($"[FinishLine] Initialized at position: {transform.position}");
-            Debug.Log($"[FinishLine] GameObject active: {gameObject.activeInHierarchy}");
+            Debug.Log($"[FinishLine] Initialized at {transform.position}");
+            Debug.Log($"[FinishLine] Active: {gameObject.activeInHierarchy}");
             Debug.Log($"[FinishLine] Layer: {LayerMask.LayerToName(gameObject.layer)}");
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    private void SubscribeToEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Subscribe<LevelRestartRequestedEvent>(OnLevelRestart);
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Unsubscribe<LevelRestartRequestedEvent>(OnLevelRestart);
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    private void OnLevelRestart(LevelRestartRequestedEvent evt)
+    {
+        ResetFinishLine();
+    }
+
+    #endregion
+
+    #region Collision Detection
+
+    private void OnTriggerEnter2D(Collider2D other)
     {
         triggerAttempts++;
         
         if (showDebugInfo)
         {
-            Debug.Log($"[FinishLine] >>> OnTriggerEnter2D called! (Attempt #{triggerAttempts})");
+            Debug.Log($"[FinishLine] >>> Trigger #{triggerAttempts}");
             Debug.Log($"[FinishLine]     Object: {other.gameObject.name}");
             Debug.Log($"[FinishLine]     Tag: '{other.tag}'");
             Debug.Log($"[FinishLine]     Layer: {LayerMask.LayerToName(other.gameObject.layer)}");
         }
         
-        // Check tag
-        if (other.CompareTag("Player"))
+        if (other.CompareTag(GameConstants.Tags.PLAYER))
         {
             if (showDebugInfo)
             {
@@ -69,59 +124,28 @@ public class FinishLine : MonoBehaviour
             
             if (!hasTriggered)
             {
-                hasTriggered = true;
-                
-                Debug.Log("<color=green>[FinishLine] ★★★ FINISH LINE CROSSED! ★★★</color>");
-                
-                // Check GameManager
-                if (GameManager.Instance == null)
-                {
-                    Debug.LogError("[FinishLine] GameManager.Instance is NULL!");
-                    Debug.LogError("  → Make sure GameManager exists in scene");
-                }
-                else
-                {
-                    Debug.Log($"[FinishLine] Calling GameManager.OnLevelComplete()...");
-                    Debug.Log($"[FinishLine] Current State BEFORE: {GameManager.Instance.currentState}");
-                    
-                    GameManager.Instance.OnLevelComplete();
-                    
-                    Debug.Log($"[FinishLine] Current State AFTER: {GameManager.Instance.currentState}");
-                    
-                    if (GameManager.Instance.currentState != GameState.Completed)
-                    {
-                        Debug.LogError("[FinishLine] State did NOT change to Completed!");
-                        Debug.LogError("  → Check GameManager.OnLevelComplete() method");
-                    }
-                }
+                TriggerLevelComplete(other.gameObject);
             }
-            else
+            else if (showDebugInfo)
             {
-                if (showDebugInfo)
-                {
-                    Debug.Log("[FinishLine] Already triggered, ignoring");
-                }
+                Debug.Log("[FinishLine] Already triggered, ignoring");
             }
         }
-        else
+        else if (showDebugInfo)
         {
-            if (showDebugInfo)
-            {
-                Debug.Log($"[FinishLine] ✗ Tag mismatch: Expected 'Player', got '{other.tag}'");
-            }
+            Debug.Log($"[FinishLine] ✗ Tag mismatch: Expected 'Player', got '{other.tag}'");
         }
     }
 
-    void OnTriggerStay2D(Collider2D other)
+    private void OnTriggerStay2D(Collider2D other)
     {
-        // This fires every frame while overlapping
         if (showDebugInfo && !hasTriggered)
         {
             Debug.Log($"[FinishLine] OnTriggerStay2D: {other.gameObject.name} (Frame {Time.frameCount})");
         }
     }
 
-    void OnTriggerExit2D(Collider2D other)
+    private void OnTriggerExit2D(Collider2D other)
     {
         if (showDebugInfo)
         {
@@ -129,98 +153,131 @@ public class FinishLine : MonoBehaviour
         }
     }
 
-    // Alternative detection using collision instead of trigger
-    void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionEnter2D(Collision2D collision)
     {
         if (showDebugInfo)
         {
             Debug.LogWarning($"[FinishLine] OnCollisionEnter2D called with {collision.gameObject.name}");
-            Debug.LogWarning("  → This means collider is NOT set as Trigger!");
-            Debug.LogWarning("  → Trigger events won't fire. Check 'Is Trigger' setting.");
+            Debug.LogWarning("  → Collider is NOT set as Trigger!");
         }
     }
 
-    /// <summary>
-    /// Reset the finish line state for level restart
-    /// </summary>
+    #endregion
+
+    #region Level Completion
+
+    private void TriggerLevelComplete(GameObject player)
+    {
+        hasTriggered = true;
+        
+        Debug.Log("<color=green>[FinishLine] ★★★ FINISH LINE CROSSED! ★★★</color>");
+        
+        if (gameStateService == null)
+        {
+            Debug.LogError("[FinishLine] GameStateService is NULL!");
+            return;
+        }
+        
+        if (showDebugInfo)
+        {
+            Debug.Log($"[FinishLine] State BEFORE: {gameStateService.CurrentState}");
+        }
+        
+        // Get player info
+        IPlayerController playerController = player.GetComponent<IPlayerController>();
+        int flipCount = playerController?.FlipCount ?? 0;
+        
+        IScoreService scoreService = ServiceLocator.Instance.Get<IScoreService>();
+        int finalScore = scoreService?.CurrentScore ?? 0;
+        
+        ICollectibleService collectibleService = ServiceLocator.Instance.Get<ICollectibleService>();
+        int collectiblesCollected = collectibleService?.CollectedCount ?? 0;
+        
+        // Publish level completed event
+        eventSystem?.Publish(new LevelCompletedEvent
+        {
+            FinalScore = finalScore,
+            FlipCount = flipCount,
+            CollectiblesCollected = collectiblesCollected,
+            CompletionTime = Time.time
+        });
+        
+        if (showDebugInfo)
+        {
+            Debug.Log($"[FinishLine] State AFTER: {gameStateService.CurrentState}");
+        }
+    }
+
     public void ResetFinishLine()
     {
         hasTriggered = false;
         
         if (showDebugInfo)
         {
-            Debug.Log("[FinishLine] ✓ Finish line reset - ready to trigger again");
+            Debug.Log("[FinishLine] ✓ Reset - ready to trigger again");
         }
     }
 
-    // Visualize finish line in Scene view
-    void OnDrawGizmos()
+    #endregion
+
+    #region Debug Visualization
+
+    private void OnDrawGizmos()
     {
         Collider2D col = GetComponent<Collider2D>();
-        if (col != null)
-        {
-            // Change color based on trigger status
-            if (Application.isPlaying)
-            {
-                Gizmos.color = hasTriggered ? Color.blue : gizmoColor;
-            }
-            else
-            {
-                Gizmos.color = col.isTrigger ? gizmoColor : Color.red;
-            }
-            
-            if (col is BoxCollider2D box)
-            {
-                Vector3 size = new Vector3(box.size.x, box.size.y, 0.1f);
-                Vector3 center = transform.position + (Vector3)box.offset;
-                
-                Gizmos.DrawWireCube(center, size);
-                Gizmos.color = new Color(Gizmos.color.r, Gizmos.color.g, Gizmos.color.b, 0.3f);
-                Gizmos.DrawCube(center, size);
-            }
-            else if (col is CircleCollider2D circle)
-            {
-                Gizmos.DrawWireSphere(transform.position + (Vector3)circle.offset, circle.radius);
-            }
-            
-            // Draw finish flag icon
-            Gizmos.color = Color.white;
-            Vector3 flagPos = transform.position + Vector3.up * 2f;
-            Gizmos.DrawLine(flagPos, flagPos + Vector3.up * 2f);
-            Gizmos.DrawLine(flagPos + Vector3.up * 2f, flagPos + Vector3.up * 2f + Vector3.right * 1f);
-            
-            // Draw trigger count if playing
-            if (Application.isPlaying && triggerAttempts > 0)
-            {
-                Gizmos.color = Color.yellow;
-                Vector3 textPos = transform.position + Vector3.up * 4f;
-                Gizmos.DrawWireSphere(textPos, 0.3f);
-            }
-        }
-    }
+        if (col == null) return;
 
-    void OnDrawGizmosSelected()
-    {
-        // Draw detection range when selected
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, 2f);
-        
-        // Draw layer info
+        // Change color based on status
         if (Application.isPlaying)
         {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireCube(transform.position + Vector3.up * 5f, Vector3.one * 0.5f);
+            Gizmos.color = hasTriggered ? Color.blue : gizmoColor;
         }
+        else
+        {
+            Gizmos.color = col.isTrigger ? gizmoColor : Color.red;
+        }
+        
+        if (col is BoxCollider2D box)
+        {
+            Vector3 size = new Vector3(box.size.x, box.size.y, 0.1f);
+            Vector3 center = transform.position + (Vector3)box.offset;
+            
+            Gizmos.DrawWireCube(center, size);
+            Gizmos.color = new Color(Gizmos.color.r, Gizmos.color.g, Gizmos.color.b, 0.3f);
+            Gizmos.DrawCube(center, size);
+        }
+        else if (col is CircleCollider2D circle)
+        {
+            Gizmos.DrawWireSphere(transform.position + (Vector3)circle.offset, circle.radius);
+        }
+        
+        // Draw finish flag
+        Gizmos.color = Color.white;
+        Vector3 flagPos = transform.position + Vector3.up * GameConstants.Gizmos.FINISH_LINE_FLAG_HEIGHT;
+        Gizmos.DrawLine(flagPos, flagPos + Vector3.up * GameConstants.Gizmos.FINISH_LINE_FLAG_HEIGHT);
+        Gizmos.DrawLine(
+            flagPos + Vector3.up * GameConstants.Gizmos.FINISH_LINE_FLAG_HEIGHT, 
+            flagPos + Vector3.up * GameConstants.Gizmos.FINISH_LINE_FLAG_HEIGHT + Vector3.right * GameConstants.Gizmos.FINISH_LINE_FLAG_WIDTH
+        );
     }
-    
-    // Manual test from Inspector
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, GameConstants.Gizmos.FINISH_LINE_DETECTION_RADIUS);
+    }
+
+    #endregion
+
+    #region Debug Context Menu
+
     [ContextMenu("Test Finish Trigger")]
-    public void TestFinishTrigger()
+    private void TestFinishTrigger()
     {
         Debug.Log("=== MANUAL FINISH TEST ===");
         hasTriggered = false;
         
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        GameObject player = GameObject.FindGameObjectWithTag(GameConstants.Tags.PLAYER);
         if (player != null)
         {
             Collider2D playerCollider = player.GetComponent<Collider2D>();
@@ -238,4 +295,6 @@ public class FinishLine : MonoBehaviour
             Debug.LogError("No object with 'Player' tag found!");
         }
     }
+
+    #endregion
 }

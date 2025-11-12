@@ -1,13 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using System.Collections;
 
-/// <summary>
-/// Treasure chest reveal panel that shows before level complete screen
-/// </summary>
 public class TreasureChestPanel : MonoBehaviour
 {
+    private GameEventSystem eventSystem;
+
     [Header("Panel References")]
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Image chestImage;
@@ -16,15 +14,15 @@ public class TreasureChestPanel : MonoBehaviour
     [Header("Chest Animation")]
     [SerializeField] private Sprite closedChestSprite;
     [SerializeField] private Sprite openChestSprite;
-    [SerializeField] private float openDelay = 0.5f;
-    [SerializeField] private float openDuration = 0.3f;
+    [SerializeField] private float openDelay = GameConstants.UI.CHEST_OPEN_DELAY;
+    [SerializeField] private float openDuration = GameConstants.UI.CHEST_OPEN_DURATION;
     
     [Header("Particle Effects")]
     [SerializeField] private ParticleSystem rewardParticles;
     [SerializeField] private GameObject glowEffect;
     
     [Header("Animation Settings")]
-    [SerializeField] private float scaleInDuration = 0.5f;
+    [SerializeField] private float scaleInDuration = GameConstants.UI.CHEST_SCALE_IN_DURATION;
     [SerializeField] private AnimationCurve scaleInCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     
     [Header("Audio")]
@@ -37,26 +35,83 @@ public class TreasureChestPanel : MonoBehaviour
     private bool isShowing = false;
     private System.Action onContinueCallback;
 
-    void Start()
+    #region Initialization
+
+    private void Awake()
     {
-        // Hide panel initially
-        if (panelRoot != null)
+        InitializeServices();
+    }
+
+    private void Start()
+    {
+        SubscribeToEvents();
+        SetupUI();
+        HidePanel();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromEvents();
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+
+        if (eventSystem == null)
         {
-            panelRoot.SetActive(false);
+            Debug.LogError("[TreasureChestPanel] GameEventSystem not found!");
         }
-        
-        // Setup button
+    }
+
+    private void SubscribeToEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Subscribe<ShowTreasureChestEvent>(OnShowTreasureChest);
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Unsubscribe<ShowTreasureChestEvent>(OnShowTreasureChest);
+    }
+
+    private void SetupUI()
+    {
         if (continueButton != null)
         {
+            continueButton.onClick.RemoveAllListeners();
             continueButton.onClick.AddListener(OnContinueClicked);
         }
         
-        // Hide glow effect initially
         if (glowEffect != null)
         {
             glowEffect.SetActive(false);
         }
     }
+
+    #endregion
+
+    #region Event Handlers
+
+    private void OnShowTreasureChest(ShowTreasureChestEvent evt)
+    {
+        if (showDebug)
+        {
+            Debug.Log($"[TreasureChestPanel] Showing chest with reward: {evt.RewardPoints}");
+        }
+
+        ShowTreasureChest(() => {
+            // After treasure chest animation, show level result
+            eventSystem?.Publish(new UIRefreshRequestedEvent());
+        });
+    }
+
+    #endregion
+
+    #region Treasure Chest Display
 
     public void ShowTreasureChest(System.Action onContinue = null)
     {
@@ -64,7 +119,7 @@ public class TreasureChestPanel : MonoBehaviour
         {
             if (showDebug)
             {
-                Debug.Log("[TreasureChestPanel] Already showing, ignoring");
+                Debug.Log("[TreasureChestPanel] Already showing");
             }
             return;
         }
@@ -74,7 +129,7 @@ public class TreasureChestPanel : MonoBehaviour
         
         if (showDebug)
         {
-            Debug.Log("[TreasureChestPanel] Showing treasure chest panel");
+            Debug.Log("[TreasureChestPanel] Starting chest reveal");
         }
         
         // Show panel
@@ -86,6 +141,42 @@ public class TreasureChestPanel : MonoBehaviour
         // Start animation sequence
         StartCoroutine(ChestRevealSequence());
     }
+
+    public void HidePanel()
+    {
+        if (panelRoot != null)
+        {
+            panelRoot.SetActive(false);
+        }
+        
+        isShowing = false;
+        
+        // Reset for next time
+        ResetChest();
+    }
+
+    private void ResetChest()
+    {
+        if (chestImage != null && closedChestSprite != null)
+        {
+            chestImage.sprite = closedChestSprite;
+            chestImage.transform.localScale = Vector3.one;
+        }
+        
+        if (glowEffect != null)
+        {
+            glowEffect.SetActive(false);
+        }
+        
+        if (continueButton != null)
+        {
+            continueButton.interactable = false;
+        }
+    }
+
+    #endregion
+
+    #region Animation Sequence
 
     private IEnumerator ChestRevealSequence()
     {
@@ -144,7 +235,8 @@ public class TreasureChestPanel : MonoBehaviour
         // Play open sound
         if (chestOpenSound != null)
         {
-            AudioSource.PlayClipAtPoint(chestOpenSound, Camera.main.transform.position);
+            IAudioService audioService = ServiceLocator.Instance.Get<IAudioService>();
+            audioService?.PlaySound(chestOpenSound, Camera.main.transform.position);
         }
         
         // Animate chest opening
@@ -157,7 +249,7 @@ public class TreasureChestPanel : MonoBehaviour
             float t = elapsed / openDuration;
             
             // Bounce effect
-            float scale = 1f + Mathf.Sin(t * Mathf.PI) * 0.2f;
+            float scale = 1f + Mathf.Sin(t * Mathf.PI) * GameConstants.UI.CHEST_BOUNCE_MULTIPLIER;
             chestImage.transform.localScale = startScale * scale;
             
             // Change sprite halfway
@@ -195,14 +287,13 @@ public class TreasureChestPanel : MonoBehaviour
         // Play reward sound
         if (rewardSound != null)
         {
-            AudioSource.PlayClipAtPoint(rewardSound, Camera.main.transform.position);
+            IAudioService audioService = ServiceLocator.Instance.Get<IAudioService>();
+            audioService?.PlaySound(rewardSound, Camera.main.transform.position);
         }
         
         // Camera shake
-        if (CameraShake.Instance != null)
-        {
-            CameraShake.Instance.Shake(0.3f, 0.3f);
-        }
+        ICameraService cameraService = ServiceLocator.Instance.Get<ICameraService>();
+        cameraService?.Shake(0.3f, 0.3f);
         
         if (showDebug)
         {
@@ -210,55 +301,27 @@ public class TreasureChestPanel : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region Button Handler
+
     private void OnContinueClicked()
     {
         if (showDebug)
         {
-            Debug.Log("[TreasureChestPanel] Continue button clicked");
+            Debug.Log("[TreasureChestPanel] Continue clicked");
         }
         
-        // Hide panel
         HidePanel();
-        
-        // Invoke callback (show level result panel)
         onContinueCallback?.Invoke();
     }
 
-    public void HidePanel()
-    {
-        if (panelRoot != null)
-        {
-            panelRoot.SetActive(false);
-        }
-        
-        isShowing = false;
-        
-        // Reset for next time
-        if (chestImage != null && closedChestSprite != null)
-        {
-            chestImage.sprite = closedChestSprite;
-            chestImage.transform.localScale = Vector3.one;
-        }
-        
-        if (glowEffect != null)
-        {
-            glowEffect.SetActive(false);
-        }
-        
-        if (continueButton != null)
-        {
-            continueButton.interactable = false;
-        }
-    }
+    #endregion
 
-    public bool IsShowing()
-    {
-        return isShowing;
-    }
+    #region Debug
 
-    // Test from Inspector
     [ContextMenu("Test Show Chest")]
-    public void TestShowChest()
+    private void TestShowChest()
     {
         ShowTreasureChest(() => {
             Debug.Log("Test: Continue clicked");
@@ -266,8 +329,10 @@ public class TreasureChestPanel : MonoBehaviour
     }
 
     [ContextMenu("Test Hide Chest")]
-    public void TestHideChest()
+    private void TestHideChest()
     {
         HidePanel();
     }
+
+    #endregion
 }

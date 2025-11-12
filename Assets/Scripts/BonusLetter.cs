@@ -1,19 +1,19 @@
 using UnityEngine;
 
-/// <summary>
-/// Individual BONUS letter collectible
-/// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class BonusLetter : MonoBehaviour
 {
+    private GameEventSystem eventSystem;
+    private IEffectService effectService;
+    private IAudioService audioService;
+
     [Header("Letter Settings")]
     [SerializeField] private LetterType letter = LetterType.B;
-    [SerializeField] private string playerTag = "Player";
     
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Color normalColor = Color.yellow;
-    [SerializeField] private Color collectedColor = Color.gray;
+    [SerializeField] private Color normalColor = GameConstants.Colors.BONUS_YELLOW;
+    [SerializeField] private Color collectedColor = GameConstants.Colors.COLLECTED_GRAY;
     
     [Header("Effects")]
     [SerializeField] private GameObject collectEffect;
@@ -22,10 +22,10 @@ public class BonusLetter : MonoBehaviour
     
     [Header("Animation")]
     [SerializeField] private bool rotateAnimation = true;
-    [SerializeField] private float rotationSpeed = 50f;
+    [SerializeField] private float rotationSpeed = GameConstants.Animation.DEFAULT_ROTATION_SPEED;
     [SerializeField] private bool floatAnimation = true;
-    [SerializeField] private float floatSpeed = 2f;
-    [SerializeField] private float floatAmount = 0.3f;
+    [SerializeField] private float floatSpeed = GameConstants.Animation.DEFAULT_FLOAT_SPEED;
+    [SerializeField] private float floatAmount = GameConstants.Animation.DEFAULT_FLOAT_AMOUNT;
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = false;
@@ -43,37 +43,76 @@ public class BonusLetter : MonoBehaviour
         S = 4
     }
 
-    void Start()
+    public bool IsCollected => isCollected;
+    public int LetterIndex => (int)letter;
+    public string LetterName => letter.ToString();
+
+    #region Initialization
+
+    private void Awake()
+    {
+        InitializeServices();
+        CacheComponents();
+    }
+
+    private void Start()
+    {
+        InitializeVisuals();
+        floatTimer = Random.Range(0f, Mathf.PI * 2f);
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+        effectService = ServiceLocator.Instance.Get<IEffectService>();
+        audioService = ServiceLocator.Instance.Get<IAudioService>();
+
+        if (eventSystem == null)
+        {
+            Debug.LogError("[BonusLetter] GameEventSystem not found!");
+        }
+    }
+
+    private void CacheComponents()
     {
         startPosition = transform.position;
         
-        // Get sprite renderer if not assigned
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
-        
-        // Set initial color
+    }
+
+    private void InitializeVisuals()
+    {
         if (spriteRenderer != null && !isCollected)
         {
             spriteRenderer.color = normalColor;
         }
-        
-        // Random float offset
-        floatTimer = Random.Range(0f, Mathf.PI * 2f);
     }
 
-    void Update()
+    #endregion
+
+    #region Update Loop
+
+    private void Update()
     {
         if (isCollected) return;
         
-        // Rotation animation
+        AnimateRotation();
+        AnimateFloat();
+    }
+
+    private void AnimateRotation()
+    {
         if (rotateAnimation)
         {
             transform.Rotate(Vector3.forward, rotationSpeed * Time.deltaTime);
         }
-        
-        // Float animation
+    }
+
+    private void AnimateFloat()
+    {
         if (floatAnimation)
         {
             floatTimer += Time.deltaTime * floatSpeed;
@@ -82,19 +121,24 @@ public class BonusLetter : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    #endregion
+
+    #region Collision Detection
+
+    private void OnTriggerEnter2D(Collider2D other)
     {
         if (isCollected) return;
         
-        if (other.CompareTag(playerTag))
+        if (other.CompareTag(GameConstants.Tags.PLAYER))
         {
             Collect();
         }
     }
 
-    /// <summary>
-    /// Collect this letter
-    /// </summary>
+    #endregion
+
+    #region Collection
+
     public void Collect()
     {
         if (isCollected) return;
@@ -115,26 +159,19 @@ public class BonusLetter : MonoBehaviour
             spriteRenderer.color = collectedColor;
         }
         
-        // Notify manager
-        if (BonusLetterManager.Instance != null)
-        {
-            BonusLetterManager.Instance.OnLetterCollected(this);
-        }
+        // Publish event
+        PublishCollectionEvent();
         
         // Hide the letter
         gameObject.SetActive(false);
     }
 
-    /// <summary>
-    /// Set collected status without notifying manager (for restore)
-    /// </summary>
-    public void SetCollectedWithoutNotify(bool collected)
+    public void SetCollectedStatus(bool collected)
     {
         isCollected = collected;
         
         if (collected)
         {
-            // Hide and change color
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = collectedColor;
@@ -143,7 +180,6 @@ public class BonusLetter : MonoBehaviour
         }
         else
         {
-            // Show and restore color
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = normalColor;
@@ -152,40 +188,17 @@ public class BonusLetter : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Play collection effects
-    /// </summary>
-    private void PlayCollectEffects()
-    {
-        // Spawn effect
-        if (collectEffect != null)
-        {
-            GameObject effect = Instantiate(collectEffect, transform.position, Quaternion.identity);
-            Destroy(effect, 2f);
-        }
-        
-        // Play sound
-        if (collectSound != null)
-        {
-            AudioSource.PlayClipAtPoint(collectSound, transform.position, soundVolume);
-        }
-    }
-
-    /// <summary>
-    /// Reset letter (make it reappear if not collected)
-    /// </summary>
     public void ResetLetter()
     {
         if (!isCollected)
         {
-            // If not collected, just make sure it's visible
+            // If not collected, just ensure it's visible
             gameObject.SetActive(true);
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = normalColor;
             }
         }
-        // If collected, stay hidden (collected status persists)
         
         if (showDebug)
         {
@@ -193,9 +206,6 @@ public class BonusLetter : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Fully reset letter (uncollect)
-    /// </summary>
     public void FullReset()
     {
         isCollected = false;
@@ -215,59 +225,57 @@ public class BonusLetter : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Get letter index (0-4 for B, O, N, U, S)
-    /// </summary>
-    public int GetLetterIndex()
+    #endregion
+
+    #region Event Publishing
+
+    private void PublishCollectionEvent()
     {
-        return (int)letter;
+        if (eventSystem == null) return;
+
+        eventSystem.Publish(new BonusLetterCollectedEvent
+        {
+            LetterIndex = LetterIndex,
+            LetterName = LetterName,
+            TotalCollected = 0  // Will be updated by service
+        });
     }
 
-    /// <summary>
-    /// Get letter name
-    /// </summary>
-    public string GetLetterName()
+    #endregion
+
+    #region Effects
+
+    private void PlayCollectEffects()
     {
-        return letter.ToString();
+        // Spawn effect
+        if (collectEffect != null && effectService != null)
+        {
+            effectService.SpawnEffect(
+                collectEffect, 
+                transform.position, 
+                GameConstants.Collectibles.EFFECT_DESTROY_DELAY
+            );
+        }
+        
+        // Play sound
+        if (collectSound != null && audioService != null)
+        {
+            audioService.PlaySound(collectSound, transform.position, soundVolume);
+        }
     }
 
-    /// <summary>
-    /// Check if collected
-    /// </summary>
-    public bool IsCollected()
-    {
-        return isCollected;
-    }
+    #endregion
 
-    // Manual test from Inspector
-    [ContextMenu("Collect Letter")]
-    public void TestCollect()
-    {
-        Collect();
-    }
+    #region Debug Visualization
 
-    [ContextMenu("Reset Letter")]
-    public void TestReset()
-    {
-        ResetLetter();
-    }
-
-    [ContextMenu("Full Reset")]
-    public void TestFullReset()
-    {
-        FullReset();
-    }
-
-    // Visualize in Scene view
-    void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
         Gizmos.color = isCollected ? Color.gray : Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, 0.5f);
+        Gizmos.DrawWireSphere(transform.position, GameConstants.Collectibles.COLLECTION_TRIGGER_RADIUS);
     }
 
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
-        // Draw letter text
         #if UNITY_EDITOR
         UnityEditor.Handles.Label(
             transform.position + Vector3.up * 1f,
@@ -275,4 +283,28 @@ public class BonusLetter : MonoBehaviour
         );
         #endif
     }
+
+    #endregion
+
+    #region Debug Context Menu
+
+    [ContextMenu("Collect Letter")]
+    private void TestCollect()
+    {
+        Collect();
+    }
+
+    [ContextMenu("Reset Letter")]
+    private void TestReset()
+    {
+        ResetLetter();
+    }
+
+    [ContextMenu("Full Reset")]
+    private void TestFullReset()
+    {
+        FullReset();
+    }
+
+    #endregion
 }

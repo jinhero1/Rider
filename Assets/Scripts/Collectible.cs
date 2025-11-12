@@ -1,20 +1,18 @@
 using UnityEngine;
 
-/// <summary>
-/// Collectible item (diamond) that can be picked up by the player
-/// </summary>
-public class Collectible : MonoBehaviour
+[RequireComponent(typeof(Collider2D))]
+public class Collectible : MonoBehaviour, ICollectible
 {
+    private GameEventSystem eventSystem;
+    private IEffectService effectService;
+    private IAudioService audioService;
+
     [Header("Visual Settings")]
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Color collectibleColor = Color.green;
-    [SerializeField] private float rotationSpeed = 100f;
-    [SerializeField] private float bobSpeed = 2f;
-    [SerializeField] private float bobHeight = 0.2f;
-    
-    [Header("Collection Settings")]
-    [SerializeField] private bool isCollected = false;
-    [SerializeField] private string playerTag = "Player";
+    [SerializeField] private Color collectibleColor = GameConstants.Colors.COLLECTIBLE_GREEN;
+    [SerializeField] private float rotationSpeed = GameConstants.Animation.DEFAULT_ROTATION_SPEED;
+    [SerializeField] private float bobSpeed = GameConstants.Animation.DEFAULT_BOB_SPEED;
+    [SerializeField] private float bobHeight = GameConstants.Animation.DEFAULT_BOB_HEIGHT;
     
     [Header("Effects")]
     [SerializeField] private GameObject collectEffectPrefab;
@@ -24,81 +22,126 @@ public class Collectible : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool showDebug = false;
 
+    private bool isCollected = false;
     private Vector3 startPosition;
-    private Quaternion startRotation;
     private Collider2D myCollider;
 
-    void Start()
+    // ICollectible implementation
+    public bool IsCollected => isCollected;
+    public Vector3 Position => transform.position;
+
+    #region Initialization
+
+    private void Awake()
     {
-        // Store initial position for bobbing animation
+        InitializeServices();
+        CacheComponents();
+    }
+
+    private void Start()
+    {
+        InitializeVisuals();
+        ValidateCollider();
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+        effectService = ServiceLocator.Instance.Get<IEffectService>();
+        audioService = ServiceLocator.Instance.Get<IAudioService>();
+
+        if (eventSystem == null)
+        {
+            Debug.LogError("[Collectible] GameEventSystem not found!");
+        }
+    }
+
+    private void CacheComponents()
+    {
         startPosition = transform.position;
-        startRotation = transform.rotation;
         
-        // Get or add components
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
         
+        myCollider = GetComponent<Collider2D>();
+    }
+
+    private void InitializeVisuals()
+    {
         if (spriteRenderer != null)
         {
             spriteRenderer.color = collectibleColor;
         }
-        
-        // Validate collider
-        myCollider = GetComponent<Collider2D>();
+    }
+
+    private void ValidateCollider()
+    {
         if (myCollider == null)
         {
             Debug.LogWarning($"[Collectible] {gameObject.name} has no Collider2D! Adding CircleCollider2D.");
             myCollider = gameObject.AddComponent<CircleCollider2D>();
         }
         
-        // Make sure it's a trigger
         if (!myCollider.isTrigger)
         {
             myCollider.isTrigger = true;
+            
             if (showDebug)
             {
                 Debug.Log($"[Collectible] {gameObject.name} collider set to trigger");
             }
         }
-        
-        if (showDebug)
-        {
-            Debug.Log($"[Collectible] {gameObject.name} initialized at {transform.position}");
-        }
     }
 
-    void Update()
+    #endregion
+
+    #region Update Loop
+
+    private void Update()
     {
         if (isCollected) return;
         
-        // Rotate the diamond
+        AnimateRotation();
+        AnimateBobbing();
+    }
+
+    private void AnimateRotation()
+    {
         transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
-        
-        // Bobbing animation
+    }
+
+    private void AnimateBobbing()
+    {
         float newY = startPosition.y + Mathf.Sin(Time.time * bobSpeed) * bobHeight;
         transform.position = new Vector3(transform.position.x, newY, transform.position.z);
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    #endregion
+
+    #region Collision Detection
+
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        // Check if already collected
         if (isCollected) return;
         
         if (showDebug)
         {
-            Debug.Log($"[Collectible] Trigger entered by: {other.gameObject.name} (Tag: {other.tag})");
+            Debug.Log($"[Collectible] Trigger: {other.gameObject.name} (Tag: {other.tag})");
         }
         
-        // Check if it's the player
-        if (other.CompareTag(playerTag))
+        if (other.CompareTag(GameConstants.Tags.PLAYER))
         {
             Collect();
         }
     }
 
-    private void Collect()
+    #endregion
+
+    #region ICollectible Implementation
+
+    public void Collect()
     {
         if (isCollected) return;
         
@@ -109,54 +152,22 @@ public class Collectible : MonoBehaviour
             Debug.Log($"[Collectible] ✦ {gameObject.name} collected!");
         }
         
-        // Notify the manager
-        if (CollectibleManager.Instance != null)
-        {
-            CollectibleManager.Instance.OnCollectibleCollected(this);
-        }
-        else
-        {
-            Debug.LogWarning("[Collectible] CollectibleManager.Instance is null!");
-        }
+        // Publish event
+        PublishCollectionEvent();
         
         // Play effects
         PlayCollectEffects();
         
-        // Disable the collectible
+        // Disable visual
         gameObject.SetActive(false);
     }
 
-    private void PlayCollectEffects()
-    {
-        // Spawn particle effect
-        if (collectEffectPrefab != null)
-        {
-            GameObject effect = Instantiate(collectEffectPrefab, transform.position, Quaternion.identity);
-            Destroy(effect, 2f); // Clean up after 2 seconds
-        }
-        
-        // Play sound
-        if (collectSound != null)
-        {
-            AudioSource.PlayClipAtPoint(collectSound, transform.position, soundVolume);
-        }
-        
-        // Optional: Camera shake
-        if (CameraShake.Instance != null)
-        {
-            CameraShake.Instance.Shake(0.1f, 0.1f);
-        }
-    }
-
-    /// <summary>
-    /// Reset the collectible (make it appear again)
-    /// </summary>
-    public void ResetCollectible()
+    public void Reset()
     {
         isCollected = false;
         gameObject.SetActive(true);
         transform.position = startPosition;
-        transform.rotation = startRotation;
+        transform.rotation = Quaternion.identity;
         
         if (showDebug)
         {
@@ -164,27 +175,58 @@ public class Collectible : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Check if this collectible has been collected
-    /// </summary>
-    public bool IsCollected()
+    #endregion
+
+    #region Event Publishing
+
+    private void PublishCollectionEvent()
     {
-        return isCollected;
+        if (eventSystem == null) return;
+
+        eventSystem.Publish(new CollectibleCollectedEvent
+        {
+            Position = transform.position,
+            CollectedCount = 0,  // Will be updated by service
+            TotalCount = 0       // Will be updated by service
+        });
     }
 
-    // Visualize collectible in Scene view
-    void OnDrawGizmos()
+    #endregion
+
+    #region Effects
+
+    private void PlayCollectEffects()
     {
-        if (Application.isPlaying && isCollected)
+        // Spawn particle effect
+        if (collectEffectPrefab != null && effectService != null)
         {
-            return; // Don't draw if collected
+            effectService.SpawnEffect(
+                collectEffectPrefab, 
+                transform.position, 
+                GameConstants.Collectibles.EFFECT_DESTROY_DELAY
+            );
         }
+        
+        // Play sound
+        if (collectSound != null && audioService != null)
+        {
+            audioService.PlaySound(collectSound, transform.position, soundVolume);
+        }
+    }
+
+    #endregion
+
+    #region Debug Visualization
+
+    private void OnDrawGizmos()
+    {
+        if (Application.isPlaying && isCollected) return;
         
         // Draw diamond shape
         Gizmos.color = collectibleColor;
         
-        Vector3 pos = Application.isPlaying ? transform.position : transform.position;
-        float size = 0.5f;
+        Vector3 pos = transform.position;
+        float size = GameConstants.Collectibles.COLLECTION_TRIGGER_RADIUS;
         
         // Diamond outline
         Vector3 top = pos + Vector3.up * size;
@@ -198,25 +240,26 @@ public class Collectible : MonoBehaviour
         Gizmos.DrawLine(bottom, right);
         
         // Draw trigger radius
-        Collider2D col = GetComponent<Collider2D>();
-        if (col != null)
+        if (myCollider != null)
         {
             Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
-            if (col is CircleCollider2D circle)
+            
+            if (myCollider is CircleCollider2D circle)
             {
                 Gizmos.DrawWireSphere(pos, circle.radius);
             }
-            else if (col is BoxCollider2D box)
+            else if (myCollider is BoxCollider2D box)
             {
                 Gizmos.DrawWireCube(pos, box.size);
             }
         }
     }
 
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
-        // Draw collection range when selected
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, 1f);
     }
+
+    #endregion
 }

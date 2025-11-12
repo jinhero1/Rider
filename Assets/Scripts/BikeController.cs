@@ -1,160 +1,188 @@
 using UnityEngine;
 
-/// <summary>
-/// Enhanced bike controller with better acceleration and speed
-/// </summary>
-public class BikeController : MonoBehaviour
+[RequireComponent(typeof(Rigidbody2D))]
+public class BikeController : MonoBehaviour, IPlayerController
 {
+    // Dependencies (injected)
+    private GameEventSystem eventSystem;
+    private IInputService inputService;
+    private IScoreService scoreService;
+    private IGameStateService gameStateService;
+
     [Header("Wheel Components")]
     [SerializeField] private WheelJoint2D rearWheel;
     [SerializeField] private WheelJoint2D frontWheel;
     [SerializeField] private Rigidbody2D bikeBody;
     
     [Header("Physics Parameters")]
-    [SerializeField] private float motorTorque = 2000f;
-    [SerializeField] private float maxSpeed = 100f;
-    [SerializeField] private float airRotationSpeed = 250f;
+    [SerializeField] private float motorTorque = GameConstants.Physics.DEFAULT_MOTOR_TORQUE;
+    [SerializeField] private float maxSpeed = GameConstants.Physics.DEFAULT_MAX_SPEED;
+    [SerializeField] private float airRotationSpeed = GameConstants.Physics.DEFAULT_AIR_ROTATION_SPEED;
+    [SerializeField] private float forwardForce = GameConstants.Physics.DEFAULT_FORWARD_FORCE;
+    [SerializeField] private float speedMultiplier = GameConstants.Physics.DEFAULT_SPEED_MULTIPLIER;
     
-    [Header("Additional Boost")]
-    [SerializeField] private bool useAdditionalForce = true;
-    [SerializeField] private float forwardForce = 100f;  // Extra horizontal push
-    [SerializeField] private float speedMultiplier = 1.5f;
-    
-    [Header("Status")]
-    public bool isGrounded = false;
-    public bool isCrashed = false;
-    public int flipCount = 0;
-    
-    [Header("Debug Info")]
-    [SerializeField] private bool showDebugInfo = true;
-    public float currentSpeed = 0f;
-
     [Header("Flip Detection")]
     [SerializeField] private bool detectBothDirections = true;
-    [SerializeField] private float flipThreshold = 320f;
+    [SerializeField] private float flipThreshold = GameConstants.FlipDetection.DEFAULT_FLIP_THRESHOLD;
     [SerializeField] private bool showFlipDebug = true;
 
     [Header("Distance Tracking")]
-    [SerializeField] private bool trackDistance = true;
-    [SerializeField] private float distanceMultiplier = 1f;
+    [SerializeField] private float distanceMultiplier = GameConstants.Score.DEFAULT_DISTANCE_MULTIPLIER;
 
-    private float totalDistance = 0f;
-    private Vector3 lastPosition;
-    private bool distanceInitialized = false;
+    [Header("Debug")]
+    [SerializeField] private bool showDebugInfo = true;
 
-    private float accumulatedRotation = 0f;
-    private float lastFrameRotation = 0f;
-    private bool wasGrounded = true;
+    // State
+    private BikePhysicsState physicsState;
+    private FlipDetectionState flipState;
+    private DistanceTracker distanceTracker;
 
-    private bool isAccelerating = false;
-    private JointMotor2D motor;
-    private Rigidbody2D rearWheelRB;
+    // Properties
+    public bool IsCrashed => physicsState.IsCrashed;
+    public int FlipCount => flipState.FlipCount;
+    public float CurrentSpeed => physicsState.CurrentSpeed;
+    public Vector3 Position => transform.position;
+    public bool IsGrounded => physicsState.IsGrounded;
 
-    void Start()
+    #region Initialization
+
+    private void Awake()
     {
-        // Initialize rear wheel motor
-        motor = rearWheel.motor;
+        InitializeDependencies();
+        InitializeComponents();
+        InitializeState();
+    }
+
+    private void InitializeDependencies()
+    {
+        // Get services from ServiceLocator
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+        inputService = ServiceLocator.Instance.Get<IInputService>();
+        scoreService = ServiceLocator.Instance.Get<IScoreService>();
+        gameStateService = ServiceLocator.Instance.Get<IGameStateService>();
+
+        if (eventSystem == null)
+        {
+            Debug.LogError("[BikeController] GameEventSystem not found in ServiceLocator!");
+        }
+    }
+
+    private void InitializeComponents()
+    {
+        if (bikeBody == null)
+        {
+            bikeBody = GetComponent<Rigidbody2D>();
+        }
+
+        // Optimize center of mass for stability
+        bikeBody.centerOfMass = new Vector2(0, GameConstants.Physics.CENTER_OF_MASS_Y_OFFSET);
+
+        // Initialize wheel motor
+        JointMotor2D motor = rearWheel.motor;
         motor.motorSpeed = 0f;
         motor.maxMotorTorque = motorTorque;
         rearWheel.motor = motor;
-        
-        // Get rear wheel rigidbody
-        rearWheelRB = rearWheel.GetComponent<Rigidbody2D>();
-
-        // Optimize center of mass for stability
-        bikeBody.centerOfMass = new Vector2(0, -0.15f);
-
-        lastPosition = transform.position;
-        distanceInitialized = true;
-        totalDistance = 0f;
-
-        lastFrameRotation = bikeBody.rotation;
-        
-        Debug.Log($"Bike Controller Initialized - Motor Torque: {motorTorque}, Max Speed: {maxSpeed}");
     }
 
-    void Update()
+    private void InitializeState()
     {
-        if (isCrashed) return;
+        physicsState = new BikePhysicsState
+        {
+            IsCrashed = false,
+            IsGrounded = false,
+            CurrentSpeed = 0f,
+            RearWheelRB = rearWheel.GetComponent<Rigidbody2D>()
+        };
+
+        flipState = new FlipDetectionState
+        {
+            FlipCount = 0,
+            AccumulatedRotation = 0f,
+            LastFrameRotation = bikeBody.rotation,
+            WasGrounded = true
+        };
+
+        distanceTracker = new DistanceTracker(transform.position, distanceMultiplier);
+
+        Debug.Log($"[BikeController] Initialized - Torque: {motorTorque}, MaxSpeed: {maxSpeed}");
+    }
+
+    #endregion
+
+    #region Update Loop
+
+    private void Update()
+    {
+        if (physicsState.IsCrashed) return;
         
         // Check if level is completed - stop accepting input
-        if (GameManager.Instance != null && GameManager.Instance.currentState == GameState.Completed)
+        if (gameStateService != null && gameStateService.IsState(GameState.Completed))
         {
-            isAccelerating = false;
+            physicsState.IsAccelerating = false;
             return;
         }
         
-        // Detect input (touch or spacebar/mouse)
-        if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space))
+        // Get input from service
+        if (inputService != null)
         {
-            isAccelerating = true;
-        }
-        else
-        {
-            isAccelerating = false;
+            physicsState.IsAccelerating = inputService.IsAccelerating;
         }
         
-        // Calculate current speed for debug
-        currentSpeed = bikeBody.linearVelocity.magnitude;
+        // Update current speed
+        physicsState.CurrentSpeed = bikeBody.linearVelocity.magnitude;
         
         // Debug info
-        if (showDebugInfo && isAccelerating)
+        if (showDebugInfo && physicsState.IsAccelerating)
         {
-            Debug.Log($"Speed: {currentSpeed:F2} | Motor Speed: {motor.motorSpeed} | Grounded: {isGrounded}");
+            Debug.Log($"Speed: {physicsState.CurrentSpeed:F2} | Grounded: {physicsState.IsGrounded}");
         }
 
         // Detect flips
         DetectFlips();
 
-        if (trackDistance && distanceInitialized && !isCrashed)
-        {
-            float deltaDistance = Vector3.Distance(transform.position, lastPosition);
-
-            if (transform.position.x > lastPosition.x)
-            {
-                totalDistance += deltaDistance;
-            }
-
-            lastPosition = transform.position;
-        }
+        // Track distance
+        distanceTracker.Update(transform.position, physicsState.IsCrashed);
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-        if (isCrashed) return;
+        if (physicsState.IsCrashed) return;
         
-        // Apply motor torque
-        if (isAccelerating)
+        ApplyPhysics();
+        LimitVelocity();
+    }
+
+    #endregion
+
+    #region Physics
+
+    private void ApplyPhysics()
+    {
+        JointMotor2D motor = rearWheel.motor;
+
+        if (physicsState.IsAccelerating)
         {
             // Set motor speed with multiplier
             motor.motorSpeed = maxSpeed * speedMultiplier;
             motor.maxMotorTorque = motorTorque;
             
-            // Apply additional horizontal force for faster acceleration
-            if (useAdditionalForce)
+            // Apply additional horizontal force
+            bikeBody.AddForce(Vector2.right * forwardForce);
+            
+            // Add force to rear wheel for better traction
+            if (physicsState.IsGrounded && physicsState.RearWheelRB != null)
             {
-                bikeBody.AddForce(Vector2.right * forwardForce);
-                
-                // Also add force to rear wheel for better traction
-                if (isGrounded && rearWheelRB != null)
-                {
-                    rearWheelRB.AddForce(Vector2.right * forwardForce * 0.5f);
-                }
+                physicsState.RearWheelRB.AddForce(Vector2.right * forwardForce * GameConstants.Boost.CONTINUOUS_FORCE_MULTIPLIER);
             }
             
             // Apply rotation when in air (backflip effect)
-            if (!isGrounded)
+            if (!physicsState.IsGrounded)
             {
                 bikeBody.AddTorque(-airRotationSpeed * Time.fixedDeltaTime);
             }
             else
             {
-                // Ground stabilization - prevent unwanted rotation
-                float angle = bikeBody.rotation % 360f;
-                if (Mathf.Abs(angle) > 5f && Mathf.Abs(angle) < 90f)
-                {
-                    bikeBody.AddTorque(-angle * 2f);
-                }
+                ApplyGroundStabilization();
             }
         }
         else
@@ -164,98 +192,267 @@ public class BikeController : MonoBehaviour
         }
         
         rearWheel.motor = motor;
+    }
+
+    private void ApplyGroundStabilization()
+    {
+        float angle = bikeBody.rotation % GameConstants.FlipDetection.FULL_ROTATION_DEGREES;
         
-        // Limit max velocity if needed (prevent unrealistic speeds)
-        if (bikeBody.linearVelocity.magnitude > maxSpeed * 2f)
+        if (Mathf.Abs(angle) > GameConstants.Physics.GROUND_STABILIZATION_ANGLE_THRESHOLD && 
+            Mathf.Abs(angle) < GameConstants.Physics.GROUND_STABILIZATION_ANGLE_MAX)
         {
-            bikeBody.linearVelocity = bikeBody.linearVelocity.normalized * maxSpeed * 2f;
+            bikeBody.AddTorque(-angle * GameConstants.Physics.GROUND_STABILIZATION_TORQUE_MULTIPLIER);
         }
     }
 
-    void DetectFlips()
+    private void LimitVelocity()
+    {
+        float maxVelocity = maxSpeed * GameConstants.Physics.SPEED_VELOCITY_LIMIT_MULTIPLIER;
+        
+        if (bikeBody.linearVelocity.magnitude > maxVelocity)
+        {
+            bikeBody.linearVelocity = bikeBody.linearVelocity.normalized * maxVelocity;
+        }
+    }
+
+    #endregion
+
+    #region Flip Detection
+
+    private void DetectFlips()
     {
         float currentRot = bikeBody.rotation;
+        float delta = Mathf.DeltaAngle(flipState.LastFrameRotation, currentRot);
 
-        float delta = Mathf.DeltaAngle(lastFrameRotation, currentRot);
-
-        if (!isGrounded)
+        if (!physicsState.IsGrounded)
         {
             if (detectBothDirections)
             {
-                accumulatedRotation += Mathf.Abs(delta);
+                flipState.AccumulatedRotation += Mathf.Abs(delta);
 
-                if (showFlipDebug && accumulatedRotation > 90f)
+                if (showFlipDebug && flipState.AccumulatedRotation > GameConstants.FlipDetection.FLIP_PROGRESS_LOG_THRESHOLD)
                 {
-                    Debug.Log($"[Flip Progress] {accumulatedRotation:F0}° / {flipThreshold}°");
+                    Debug.Log($"[Flip Progress] {flipState.AccumulatedRotation:F0}° / {flipThreshold}°");
                 }
             }
 
-            if (accumulatedRotation >= flipThreshold)
+            if (flipState.AccumulatedRotation >= flipThreshold)
             {
-                flipCount++;
-                GameManager.Instance?.OnFlipCompleted();
-
-                Debug.Log($"<color=yellow>★★★ FLIP COMPLETED! ★★★ Total Flips: {flipCount}</color>");
-
-                accumulatedRotation -= 360f;
-
-                if (accumulatedRotation < 0)
-                {
-                    accumulatedRotation = 0;
-                }
+                OnFlipCompleted();
             }
         }
         else
         {
-            if (!wasGrounded)
+            if (!flipState.WasGrounded)
             {
-                if (accumulatedRotation > 100f && showFlipDebug)
+                if (flipState.AccumulatedRotation > GameConstants.FlipDetection.INCOMPLETE_FLIP_THRESHOLD && showFlipDebug)
                 {
-                    Debug.Log($"[Flip Incomplete] Landed with {accumulatedRotation:F0}° rotation");
+                    Debug.Log($"[Flip Incomplete] Landed with {flipState.AccumulatedRotation:F0}° rotation");
                 }
 
-                accumulatedRotation = 0f;
+                flipState.AccumulatedRotation = 0f;
             }
         }
         
-        lastFrameRotation = currentRot;
-        wasGrounded = isGrounded;
+        flipState.LastFrameRotation = currentRot;
+        flipState.WasGrounded = physicsState.IsGrounded;
     }
+
+    private void OnFlipCompleted()
+    {
+        flipState.FlipCount++;
+        flipState.AccumulatedRotation -= GameConstants.FlipDetection.FULL_ROTATION_DEGREES;
+
+        if (flipState.AccumulatedRotation < 0)
+        {
+            flipState.AccumulatedRotation = 0;
+        }
+
+        int bonusPoints = GameConstants.Score.DEFAULT_FLIP_BONUS_POINTS;
+
+        // Add to distance tracker
+        distanceTracker.AddBonus(bonusPoints);
+
+        // Publish flip event
+        if (eventSystem != null)
+        {
+            eventSystem.Publish(new FlipCompletedEvent
+            {
+                TotalFlipCount = flipState.FlipCount,
+                BonusPoints = bonusPoints,
+                Position = transform.position
+            });
+        }
+
+        Debug.Log($"<color=yellow>★★★ FLIP COMPLETED! ★★★ Total: {flipState.FlipCount}</color>");
+    }
+
+    #endregion
+
+    #region Public API
 
     public void Crash()
     {
-        if (isCrashed) return;
+        if (physicsState.IsCrashed) return;
         
-        isCrashed = true;
+        physicsState.IsCrashed = true;
+        
+        JointMotor2D motor = rearWheel.motor;
         motor.maxMotorTorque = 0f;
         rearWheel.motor = motor;
         
-        GameManager.Instance?.OnCrash();
-    }
-
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
+        // Publish crash event
+        if (eventSystem != null)
         {
-            isGrounded = true;
+            eventSystem.Publish(new PlayerCrashedEvent
+            {
+                CrashPosition = transform.position,
+                CrashObject = gameObject
+            });
         }
+
+        Debug.Log("[BikeController] Player crashed!");
     }
 
-    void OnCollisionExit2D(Collision2D collision)
+    public void ResetPlayer()
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        gameObject.SetActive(true);
+        
+        physicsState.IsCrashed = false;
+        flipState.FlipCount = 0;
+        flipState.AccumulatedRotation = 0f;
+        
+        bikeBody.linearVelocity = Vector2.zero;
+        bikeBody.angularVelocity = 0f;
+        bikeBody.rotation = 0f;
+        
+        if (physicsState.RearWheelRB != null)
         {
-            isGrounded = false;
+            physicsState.RearWheelRB.linearVelocity = Vector2.zero;
+            physicsState.RearWheelRB.angularVelocity = 0f;
         }
+
+        transform.rotation = Quaternion.identity;
+        
+        distanceTracker.Reset(transform.position);
+
+        Debug.Log("[BikeController] Player reset");
     }
 
-    public void StopBike()
+    public void StopPlayer()
     {
-        // Stop all input
-        isAccelerating = false;
-
-        // Gradually stop the bike (more realistic)
+        physicsState.IsAccelerating = false;
         bikeBody.linearVelocity *= 0.5f;
+    }
+
+    public int GetScore()
+    {
+        return distanceTracker.GetScore();
+    }
+
+    #endregion
+
+    #region Collision Detection
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag(GameConstants.Tags.GROUND))
+        {
+            physicsState.IsGrounded = true;
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag(GameConstants.Tags.GROUND))
+        {
+            physicsState.IsGrounded = false;
+        }
+    }
+
+    #endregion
+
+    #region Debug Visualization
+
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying || bikeBody == null) return;
+
+        // Draw velocity vector
+        Gizmos.color = Color.green;
+        Gizmos.DrawLine(transform.position, transform.position + (Vector3)bikeBody.linearVelocity);
+        
+        // Draw speed indicator
+        float speedRatio = physicsState.CurrentSpeed / maxSpeed;
+        Gizmos.color = Color.Lerp(Color.red, Color.green, speedRatio);
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * 2f, 0.2f + speedRatio);
+    }
+
+    #endregion
+}
+
+#region Helper Classes
+
+/// <summary>
+/// Encapsulates bike physics state
+/// Follows Single Responsibility Principle
+/// </summary>
+public class BikePhysicsState
+{
+    public bool IsCrashed;
+    public bool IsGrounded;
+    public bool IsAccelerating;
+    public float CurrentSpeed;
+    public Rigidbody2D RearWheelRB;
+}
+
+/// <summary>
+/// Encapsulates flip detection state
+/// Follows Single Responsibility Principle
+/// </summary>
+public class FlipDetectionState
+{
+    public int FlipCount;
+    public float AccumulatedRotation;
+    public float LastFrameRotation;
+    public bool WasGrounded;
+}
+
+/// <summary>
+/// Handles distance tracking and score calculation
+/// Follows Single Responsibility Principle
+/// </summary>
+public class DistanceTracker
+{
+    private float totalDistance;
+    private Vector3 lastPosition;
+    private readonly float distanceMultiplier;
+
+    public DistanceTracker(Vector3 startPosition, float multiplier)
+    {
+        lastPosition = startPosition;
+        distanceMultiplier = multiplier;
+        totalDistance = 0f;
+    }
+
+    public void Update(Vector3 currentPosition, bool isCrashed)
+    {
+        if (isCrashed) return;
+
+        float deltaDistance = Vector3.Distance(currentPosition, lastPosition);
+
+        if (currentPosition.x > lastPosition.x)
+        {
+            totalDistance += deltaDistance;
+        }
+
+        lastPosition = currentPosition;
+    }
+
+    public void AddBonus(int bonusPoints)
+    {
+        totalDistance += bonusPoints;
+        Debug.Log($"[DistanceTracker] Bonus added: +{bonusPoints}, Total: {totalDistance:F1}");
     }
 
     public int GetScore()
@@ -263,52 +460,11 @@ public class BikeController : MonoBehaviour
         return Mathf.FloorToInt(totalDistance * distanceMultiplier);
     }
 
-    public void AddFlipBonus(int bonusPoints)
+    public void Reset(Vector3 newPosition)
     {
-        totalDistance += bonusPoints;
-        Debug.Log($"[Bike] Flip bonus added: +{bonusPoints}, Total distance: {totalDistance:F1}");
-    }
-
-    public void ResetBike()
-    {
-        gameObject.SetActive(true);
-        isCrashed = false;
-        flipCount = 0;
-        bikeBody.linearVelocity = Vector2.zero;
-        bikeBody.angularVelocity = 0f;
-        bikeBody.rotation = 0f;
         totalDistance = 0f;
-        accumulatedRotation = 0f;
-        
-        lastPosition = transform.position;
-
-        if (rearWheelRB != null)
-        {
-            rearWheelRB.linearVelocity = Vector2.zero;
-            rearWheelRB.angularVelocity = 0f;
-        }
-
-        transform.position = GameManager.Instance.startPosition;
-        transform.rotation = Quaternion.identity;
-    }
-    
-    public void HideBike()
-    {
-        gameObject.SetActive(false);
-    }
-    
-    // Visualize speed in Scene view
-    void OnDrawGizmos()
-    {
-        if (Application.isPlaying && bikeBody != null)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.DrawLine(transform.position, transform.position + (Vector3)bikeBody.linearVelocity);
-            
-            // Draw speed indicator
-            float speedRatio = currentSpeed / maxSpeed;
-            Gizmos.color = Color.Lerp(Color.red, Color.green, speedRatio);
-            Gizmos.DrawWireSphere(transform.position + Vector3.up * 2f, 0.2f + speedRatio);
-        }
+        lastPosition = newPosition;
     }
 }
+
+#endregion

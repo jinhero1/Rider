@@ -1,20 +1,22 @@
 using UnityEngine;
 
-/// <summary>
-/// Boost platform that accelerates the bike when touched
-/// </summary>
 public class BoostPlatform : MonoBehaviour
 {
+    private GameEventSystem eventSystem;
+    private IEffectService effectService;
+    private IAudioService audioService;
+    private ICameraService cameraService;
+
     [Header("Boost Settings")]
-    [SerializeField] private float boostForce = 500f;
-    [SerializeField] private Vector2 boostDirection = Vector2.right; // Default: forward boost
+    [SerializeField] private float boostForce = GameConstants.Boost.DEFAULT_BOOST_FORCE;
+    [SerializeField] private Vector2 boostDirection = Vector2.right;
     [SerializeField] private bool normalizeDirection = true;
     
     [Header("Boost Type")]
     [SerializeField] private BoostType boostType = BoostType.Impulse;
     
     [Header("Visual Feedback")]
-    [SerializeField] private Color platformColor = Color.green;
+    [SerializeField] private Color platformColor = GameConstants.Colors.BOOST_PLATFORM_GREEN;
     [SerializeField] private bool showArrow = true;
     [SerializeField] private float arrowScale = 1f;
     
@@ -22,7 +24,7 @@ public class BoostPlatform : MonoBehaviour
     [SerializeField] private GameObject boostEffectPrefab;
     [SerializeField] private ParticleSystem boostParticles;
     [SerializeField] private bool enableScreenShake = true;
-    [SerializeField] private float shakeIntensity = 0.1f;
+    [SerializeField] private float shakeIntensity = GameConstants.Boost.DEFAULT_SHAKE_INTENSITY;
     
     [Header("Sound")]
     [SerializeField] private AudioClip boostSound;
@@ -30,7 +32,7 @@ public class BoostPlatform : MonoBehaviour
     
     [Header("Cooldown")]
     [SerializeField] private bool useCooldown = false;
-    [SerializeField] private float cooldownTime = 1f;
+    [SerializeField] private float cooldownTime = GameConstants.Boost.DEFAULT_COOLDOWN_TIME;
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
@@ -42,31 +44,64 @@ public class BoostPlatform : MonoBehaviour
 
     public enum BoostType
     {
-        Impulse,      // One-time instant boost
-        Continuous,   // Continuous force while on platform
-        SpeedSet      // Set speed to specific value
+        Impulse,
+        Continuous,
+        SpeedSet
     }
 
-    void Start()
+    #region Initialization
+
+    private void Awake()
     {
-        // Get or add sprite renderer
+        InitializeServices();
+        CacheComponents();
+    }
+
+    private void Start()
+    {
+        InitializeVisuals();
+        NormalizeDirection();
+        ValidateCollider();
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+        effectService = ServiceLocator.Instance.Get<IEffectService>();
+        audioService = ServiceLocator.Instance.Get<IAudioService>();
+        cameraService = ServiceLocator.Instance.Get<ICameraService>();
+
+        if (eventSystem == null && showDebug)
+        {
+            Debug.LogWarning("[BoostPlatform] GameEventSystem not found!");
+        }
+    }
+
+    private void CacheComponents()
+    {
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer == null)
         {
             spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
         }
-        
-        // Set platform color
+    }
+
+    private void InitializeVisuals()
+    {
         originalColor = platformColor;
         spriteRenderer.color = platformColor;
-        
-        // Normalize boost direction if needed
+    }
+
+    private void NormalizeDirection()
+    {
         if (normalizeDirection && boostDirection != Vector2.zero)
         {
             boostDirection = boostDirection.normalized;
         }
-        
-        // Validate collider
+    }
+
+    private void ValidateCollider()
+    {
         Collider2D col = GetComponent<Collider2D>();
         if (col == null)
         {
@@ -80,53 +115,67 @@ public class BoostPlatform : MonoBehaviour
         }
     }
 
-    void Update()
+    #endregion
+
+    #region Update Loop
+
+    private void Update()
     {
-        // Handle cooldown
-        if (isOnCooldown)
+        UpdateCooldown();
+    }
+
+    private void UpdateCooldown()
+    {
+        if (!isOnCooldown) return;
+
+        cooldownTimer -= Time.deltaTime;
+        
+        if (cooldownTimer <= 0f)
         {
-            cooldownTimer -= Time.deltaTime;
-            
-            if (cooldownTimer <= 0f)
-            {
-                isOnCooldown = false;
-                spriteRenderer.color = originalColor;
-            }
-            else
-            {
-                // Flash during cooldown
-                float alpha = Mathf.PingPong(Time.time * 3f, 1f);
-                spriteRenderer.color = Color.Lerp(Color.gray, originalColor, alpha);
-            }
+            isOnCooldown = false;
+            spriteRenderer.color = originalColor;
+        }
+        else
+        {
+            // Flash during cooldown
+            float alpha = Mathf.PingPong(Time.time * 3f, 1f);
+            spriteRenderer.color = Color.Lerp(Color.gray, originalColor, alpha);
         }
     }
 
-    void OnCollisionEnter2D(Collision2D collision)
+    #endregion
+
+    #region Collision Detection
+
+    private void OnCollisionEnter2D(Collision2D collision)
     {
-        // Check if bike hit the platform
-        if (collision.gameObject.CompareTag("Player") || collision.gameObject.layer == LayerMask.NameToLayer("Player"))
-        {
-            ApplyBoost(collision.rigidbody);
-        }
+        if (!IsPlayer(collision.gameObject)) return;
+        
+        ApplyBoost(collision.rigidbody, collision.rigidbody.position);
     }
 
-    void OnCollisionStay2D(Collision2D collision)
+    private void OnCollisionStay2D(Collision2D collision)
     {
-        // For continuous boost
-        if (boostType == BoostType.Continuous && !isOnCooldown)
-        {
-            if (collision.gameObject.CompareTag("Player") || collision.gameObject.layer == LayerMask.NameToLayer("Player"))
-            {
-                ApplyBoost(collision.rigidbody);
-            }
-        }
+        if (boostType != BoostType.Continuous) return;
+        if (isOnCooldown) return;
+        if (!IsPlayer(collision.gameObject)) return;
+        
+        ApplyBoost(collision.rigidbody, collision.rigidbody.position);
     }
 
-    void ApplyBoost(Rigidbody2D bikeRB)
+    private bool IsPlayer(GameObject obj)
+    {
+        return obj.CompareTag(GameConstants.Tags.PLAYER) || 
+               obj.layer == LayerMask.NameToLayer(GameConstants.Layers.PLAYER);
+    }
+
+    #endregion
+
+    #region Boost Application
+
+    private void ApplyBoost(Rigidbody2D bikeRB, Vector2 position)
     {
         if (bikeRB == null) return;
-        
-        // Check cooldown
         if (isOnCooldown && useCooldown) return;
         
         if (showDebug)
@@ -150,8 +199,11 @@ public class BoostPlatform : MonoBehaviour
                 break;
         }
         
+        // Publish boost event
+        PublishBoostEvent(position);
+        
         // Trigger effects
-        TriggerEffects(bikeRB.position);
+        TriggerEffects(position);
         
         // Start cooldown
         if (useCooldown)
@@ -161,12 +213,32 @@ public class BoostPlatform : MonoBehaviour
         }
     }
 
-    void TriggerEffects(Vector2 position)
+    #endregion
+
+    #region Event Publishing
+
+    private void PublishBoostEvent(Vector2 position)
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Publish(new BoostActivatedEvent
+        {
+            BoostPosition = position,
+            BoostDirection = boostDirection,
+            BoostForce = boostForce
+        });
+    }
+
+    #endregion
+
+    #region Effects
+
+    private void TriggerEffects(Vector2 position)
     {
         // Spawn boost effect
-        if (boostEffectPrefab != null)
+        if (boostEffectPrefab != null && effectService != null)
         {
-            Instantiate(boostEffectPrefab, position, Quaternion.identity);
+            effectService.SpawnEffect(boostEffectPrefab, position, Quaternion.identity);
         }
         
         // Play particles
@@ -176,20 +248,23 @@ public class BoostPlatform : MonoBehaviour
         }
         
         // Play sound
-        if (boostSound != null)
+        if (boostSound != null && audioService != null)
         {
-            AudioSource.PlayClipAtPoint(boostSound, position, soundVolume);
+            audioService.PlaySound(boostSound, position, soundVolume);
         }
         
         // Camera shake
-        if (enableScreenShake && CameraShake.Instance != null)
+        if (enableScreenShake && cameraService != null)
         {
-            CameraShake.Instance.Shake(0.1f, shakeIntensity);
+            cameraService.Shake(0.1f, shakeIntensity);
         }
     }
 
-    // Visualize boost platform in editor
-    void OnDrawGizmos()
+    #endregion
+
+    #region Debug Visualization
+
+    private void OnDrawGizmos()
     {
         Gizmos.color = platformColor;
         
@@ -205,7 +280,7 @@ public class BoostPlatform : MonoBehaviour
         {
             Vector3 startPos = transform.position;
             Vector3 direction = boostDirection.normalized;
-            float arrowLength = 2f * arrowScale;
+            float arrowLength = GameConstants.Boost.ARROW_LENGTH_SCALE * arrowScale;
             Vector3 endPos = startPos + (Vector3)direction * arrowLength;
             
             // Arrow shaft
@@ -213,22 +288,21 @@ public class BoostPlatform : MonoBehaviour
             Gizmos.DrawLine(startPos, endPos);
             
             // Arrow head
-            Vector3 right = Quaternion.Euler(0, 0, -30) * -direction * 0.5f * arrowScale;
-            Vector3 left = Quaternion.Euler(0, 0, 30) * -direction * 0.5f * arrowScale;
+            Vector3 right = Quaternion.Euler(0, 0, -GameConstants.Boost.ARROW_HEAD_ANGLE) * -direction * GameConstants.Boost.ARROW_HEAD_LENGTH * arrowScale;
+            Vector3 left = Quaternion.Euler(0, 0, GameConstants.Boost.ARROW_HEAD_ANGLE) * -direction * GameConstants.Boost.ARROW_HEAD_LENGTH * arrowScale;
             
             Gizmos.DrawLine(endPos, endPos + right);
             Gizmos.DrawLine(endPos, endPos + left);
         }
     }
 
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
         // Draw boost force visualization
         Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
-        Vector3 forceVector = (Vector3)boostDirection.normalized * (boostForce / 100f);
+        Vector3 forceVector = (Vector3)boostDirection.normalized * (boostForce / GameConstants.Boost.FORCE_VISUALIZATION_DIVISOR);
         Gizmos.DrawRay(transform.position, forceVector);
         
-        // Draw text (boost info)
         #if UNITY_EDITOR
         UnityEditor.Handles.Label(
             transform.position + Vector3.up * 2f,
@@ -236,4 +310,6 @@ public class BoostPlatform : MonoBehaviour
         );
         #endif
     }
+
+    #endregion
 }
