@@ -1,28 +1,36 @@
 using UnityEngine;
-using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Manages BONUS letter collection and treasure chest reveal
+/// Manages BONUS letter collection system with Track Prefab support
 /// </summary>
 public class BonusLetterManager : MonoBehaviour
 {
     public static BonusLetterManager Instance;
     
-    [Header("Letter Management")]
-    [SerializeField] private List<BonusLetter> allLetters = new List<BonusLetter>();
+    [Header("BONUS Letters")]
+    [SerializeField] private BonusLetter[] bonusLetters = new BonusLetter[5];
     [SerializeField] private bool autoFindLetters = true;
     
-    [Header("Collection Status")]
-    [SerializeField] private bool[] collectedLetters = new bool[5]; // B, O, N, U, S
+    [Header("Collection Tracking")]
+    [SerializeField] private bool[] collectedStatus = new bool[5]; // B, O, N, U, S
     [SerializeField] private int totalCollected = 0;
-    [SerializeField] private bool allLettersCollected = false;
     
-    [Header("Treasure Chest")]
-    [SerializeField] private bool treasureChestShown = false;
+    [Header("Treasure Chest Reward")]
+    [SerializeField] private int treasureChestPoints = 100;
+    [SerializeField] private bool treasureUnlocked = false;
+    
+    [Header("UI")]
+    [SerializeField] private UIManager uiManager;
+    
+    [Header("Track Support")]
+    [SerializeField] private bool supportDynamicTracks = true;
+    [SerializeField] private bool hideUIWhenNoLetters = true;
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
+    
+    private bool isInitialized = false;
 
     void Awake()
     {
@@ -36,242 +44,320 @@ public class BonusLetterManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+        
+        // Initialize collected status array
+        if (collectedStatus == null || collectedStatus.Length != 5)
+        {
+            collectedStatus = new bool[5];
+        }
     }
 
     void Start()
     {
-        InitializeLetters();
+        // Find UI Manager
+        if (uiManager == null)
+        {
+            uiManager = FindFirstObjectByType<UIManager>();
+        }
+        
+        // Initial scan for letters
+        RefreshBonusLetters();
+        
+        isInitialized = true;
+        
+        if (showDebug)
+        {
+            Debug.Log($"[BonusLetterManager] Initialized. Dynamic Track Support: {supportDynamicTracks}");
+        }
     }
 
-    private void InitializeLetters()
+    /// <summary>
+    /// Refresh/rescan for bonus letters (call after loading new Track)
+    /// </summary>
+    public void RefreshBonusLetters()
     {
-        // Auto-find all bonus letters in the scene
-        if (autoFindLetters)
+        if (autoFindLetters || bonusLetters.Length == 0)
         {
-            BonusLetter[] foundLetters = FindObjectsByType<BonusLetter>(FindObjectsSortMode.None);
-            allLetters.Clear();
-            allLetters.AddRange(foundLetters);
+            FindAllBonusLetters();
+        }
+        
+        // Check if we have letters
+        if (bonusLetters.Length == 0 || bonusLetters.All(l => l == null))
+        {
+            if (hideUIWhenNoLetters && uiManager != null)
+            {
+                // Hide BONUS UI when no letters in current Track
+                uiManager.UpdateBonusLetters(new bool[5]);
+            }
             
             if (showDebug)
             {
-                Debug.Log($"[BonusLetterManager] Auto-found {foundLetters.Length} bonus letters");
+                Debug.Log("[BonusLetterManager] No BONUS letters found in current Track");
             }
-        }
-        
-        // Initialize collection status
-        collectedLetters = new bool[5];
-        totalCollected = 0;
-        allLettersCollected = false;
-        treasureChestShown = false;
-        
-        if (showDebug)
-        {
-            Debug.Log($"[BonusLetterManager] Initialized with {allLetters.Count} letters");
-        }
-        
-        // Update UI
-        UpdateUI();
-    }
-
-    public void OnLetterCollected(BonusLetter letter)
-    {
-        if (!allLetters.Contains(letter))
-        {
-            Debug.LogWarning($"[BonusLetterManager] Collected letter not in list: {letter.gameObject.name}");
             return;
         }
         
-        // Mark this letter type as collected
-        int letterIndex = (int)letter.GetLetterType();
+        // Apply saved collected status to letters
+        RestoreCollectedStatus();
         
-        if (collectedLetters[letterIndex])
+        // Update UI
+        UpdateBonusLettersUI();
+        
+        if (showDebug)
+        {
+            Debug.Log($"[BonusLetterManager] Found {bonusLetters.Length} BONUS letters");
+        }
+    }
+
+    /// <summary>
+    /// Find all bonus letters in the scene (including in Track Prefabs)
+    /// </summary>
+    private void FindAllBonusLetters()
+    {
+        BonusLetter[] foundLetters = FindObjectsOfType<BonusLetter>();
+        
+        if (foundLetters.Length == 0)
+        {
+            bonusLetters = new BonusLetter[0];
+            return;
+        }
+        
+        // Sort by letter index (B=0, O=1, N=2, U=3, S=4)
+        bonusLetters = foundLetters.OrderBy(l => l.GetLetterIndex()).ToArray();
+        
+        // Validate we have the right letters
+        if (bonusLetters.Length != 5)
         {
             if (showDebug)
             {
-                Debug.Log($"[BonusLetterManager] Letter {letter.GetLetterType()} already collected");
+                Debug.LogWarning($"[BonusLetterManager] Expected 5 letters, found {bonusLetters.Length}");
             }
+        }
+        
+        if (showDebug)
+        {
+            string letters = string.Join(", ", bonusLetters.Select(l => l.GetLetterName()));
+            Debug.Log($"[BonusLetterManager] Found letters: {letters}");
+        }
+    }
+
+    /// <summary>
+    /// Restore collected status to letters after Track reload
+    /// </summary>
+    private void RestoreCollectedStatus()
+    {
+        for (int i = 0; i < bonusLetters.Length && i < collectedStatus.Length; i++)
+        {
+            if (bonusLetters[i] != null && collectedStatus[i])
+            {
+                // Letter was already collected, set it as collected
+                bonusLetters[i].SetCollectedWithoutNotify(true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called when a bonus letter is collected
+    /// </summary>
+    public void OnLetterCollected(BonusLetter letter)
+    {
+        int index = letter.GetLetterIndex();
+        
+        if (index < 0 || index >= 5)
+        {
+            Debug.LogError($"[BonusLetterManager] Invalid letter index: {index}");
             return;
         }
         
-        collectedLetters[letterIndex] = true;
-        totalCollected++;
-        
-        if (showDebug)
+        // Mark as collected
+        if (!collectedStatus[index])
         {
-            Debug.Log($"[BonusLetterManager] ★ Letter {letter.GetLetterType()} collected! ({totalCollected}/5)");
-        }
-        
-        // Update UI
-        UpdateUI();
-        
-        // Check if all letters collected
-        if (totalCollected >= 5 && !allLettersCollected)
-        {
-            OnAllLettersCollected();
+            collectedStatus[index] = true;
+            totalCollected++;
+            
+            if (showDebug)
+            {
+                Debug.Log($"[BonusLetterManager] Letter collected: {letter.GetLetterName()} ({totalCollected}/5)");
+            }
+            
+            // Update UI
+            UpdateBonusLettersUI();
+            
+            // Check if BONUS word complete
+            if (IsBonusWordComplete())
+            {
+                OnBonusWordCompleted();
+            }
         }
     }
 
-    private void OnAllLettersCollected()
+    /// <summary>
+    /// Check if all BONUS letters are collected
+    /// </summary>
+    public bool IsBonusWordComplete()
     {
-        allLettersCollected = true;
+        return collectedStatus.All(status => status);
+    }
+
+    /// <summary>
+    /// Called when all BONUS letters are collected
+    /// </summary>
+    private void OnBonusWordCompleted()
+    {
+        if (treasureUnlocked) return; // Already unlocked
+        
+        treasureUnlocked = true;
         
         if (showDebug)
         {
-            Debug.Log("<color=yellow>[BonusLetterManager] ★★★ ALL BONUS LETTERS COLLECTED! ★★★</color>");
+            Debug.Log($"[BonusLetterManager] ✨ BONUS WORD COMPLETED! Unlocking treasure chest!");
+        }
+        
+        // Award points
+        if (GameManager.Instance != null && GameManager.Instance.bikeController != null)
+        {
+            GameManager.Instance.bikeController.AddFlipBonus(treasureChestPoints);
         }
         
         // Notify UI
-        if (GameManager.Instance != null && GameManager.Instance.uiManager != null)
+        if (uiManager != null)
         {
-            GameManager.Instance.uiManager.OnBonusWordCompleted();
+            uiManager.OnBonusWordCompleted();
         }
     }
 
-    private void UpdateUI()
+    /// <summary>
+    /// Check if treasure chest should be shown (for level completion)
+    /// </summary>
+    public bool ShouldShowTreasureChest()
     {
-        if (GameManager.Instance != null && GameManager.Instance.uiManager != null)
+        return IsBonusWordComplete() && treasureUnlocked;
+    }
+
+    /// <summary>
+    /// Update bonus letters UI
+    /// </summary>
+    private void UpdateBonusLettersUI()
+    {
+        if (uiManager != null)
         {
-            GameManager.Instance.uiManager.UpdateBonusLetters(collectedLetters);
+            uiManager.UpdateBonusLetters(collectedStatus);
         }
     }
 
+    /// <summary>
+    /// Reset all letters (make them reappear, but keep collected status)
+    /// </summary>
     public void ResetAllLetters()
     {
-        foreach (BonusLetter letter in allLetters)
+        foreach (var letter in bonusLetters)
+        {
+            if (letter != null)
+            {
+                // Check if this letter was collected
+                int index = letter.GetLetterIndex();
+                bool wasCollected = index >= 0 && index < collectedStatus.Length && collectedStatus[index];
+                
+                // Reset letter (will show/hide based on collected status)
+                letter.ResetLetter();
+                
+                // If was collected, keep it hidden
+                if (wasCollected)
+                {
+                    letter.SetCollectedWithoutNotify(true);
+                }
+            }
+        }
+        
+        // Update UI
+        UpdateBonusLettersUI();
+        
+        if (showDebug)
+        {
+            Debug.Log($"[BonusLetterManager] Letters reset. Collected: {totalCollected}/5");
+        }
+    }
+
+    /// <summary>
+    /// Fully reset everything (new game)
+    /// </summary>
+    public void FullReset()
+    {
+        // Reset collected status
+        collectedStatus = new bool[5];
+        totalCollected = 0;
+        treasureUnlocked = false;
+        
+        // Reset all letters
+        foreach (var letter in bonusLetters)
         {
             if (letter != null)
             {
                 letter.ResetLetter();
             }
         }
-
-        collectedLetters = new bool[5];
-        totalCollected = 0;
-        allLettersCollected = false;
-        treasureChestShown = false;
-
+        
+        // Update UI
+        UpdateBonusLettersUI();
+        
         if (showDebug)
         {
-            Debug.Log($"[BonusLetterManager] All letters reset. Collected status preserved.");
+            Debug.Log("[BonusLetterManager] Full reset complete");
         }
-        
-        UpdateUI();
     }
 
-    public bool AreAllLettersCollected()
+    /// <summary>
+    /// Get current collection status
+    /// </summary>
+    public bool[] GetCollectedStatus()
     {
-        return allLettersCollected;
+        return (bool[])collectedStatus.Clone();
     }
 
-    public bool IsLetterCollected(BonusLetterType letterType)
-    {
-        return collectedLetters[(int)letterType];
-    }
-
-    public int GetCollectedCount()
+    /// <summary>
+    /// Get total collected count
+    /// </summary>
+    public int GetTotalCollected()
     {
         return totalCollected;
     }
 
-    public bool[] GetCollectedLetters()
+    // Manual controls from Inspector
+    [ContextMenu("Refresh Bonus Letters")]
+    public void ManualRefresh()
     {
-        return collectedLetters;
+        RefreshBonusLetters();
     }
 
-    public void SetTreasureChestShown(bool shown)
-    {
-        treasureChestShown = shown;
-    }
-
-    public bool IsTreasureChestShown()
-    {
-        return treasureChestShown;
-    }
-
-    // Check if player should see treasure chest when completing level
-    public bool ShouldShowTreasureChest()
-    {
-        return allLettersCollected && !treasureChestShown;
-    }
-
-    // Manual reset from Inspector
     [ContextMenu("Reset All Letters")]
     public void ManualResetLetters()
     {
         ResetAllLetters();
     }
 
-    [ContextMenu("Collect All (Test)")]
-    public void TestCollectAll()
+    [ContextMenu("Full Reset")]
+    public void ManualFullReset()
     {
-        for (int i = 0; i < 5; i++)
-        {
-            collectedLetters[i] = true;
-        }
-        totalCollected = 5;
-        allLettersCollected = true;
-        UpdateUI();
-        Debug.Log("[BonusLetterManager] TEST: All letters collected");
+        FullReset();
     }
 
-    [ContextMenu("Reset Collection Status")]
-    public void ResetCollectionStatus()
+    [ContextMenu("Collect All Letters (Debug)")]
+    public void DebugCollectAll()
     {
-        collectedLetters = new bool[5];
-        totalCollected = 0;
-        allLettersCollected = false;
-        treasureChestShown = false;
-        UpdateUI();
-        Debug.Log("[BonusLetterManager] Collection status reset");
-    }
-
-    // Visualize in Scene view
-    void OnDrawGizmos()
-    {
-        if (!Application.isPlaying) return;
-        
-        // Draw collection progress
-        Gizmos.color = Color.yellow;
-        float progress = totalCollected / 5f;
-        
-        Vector3 barStart = transform.position + Vector3.up * 2f + Vector3.left * 2.5f;
-        Vector3 barEnd = barStart + Vector3.right * 5f;
-        
-        // Background
-        Gizmos.color = Color.gray;
-        Gizmos.DrawLine(barStart, barEnd);
-        
-        // Progress
-        Gizmos.color = allLettersCollected ? Color.green : Color.yellow;
-        Vector3 progressEnd = Vector3.Lerp(barStart, barEnd, progress);
-        Gizmos.DrawLine(barStart, progressEnd);
-        
-        // Draw letter indicators
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < bonusLetters.Length; i++)
         {
-            Vector3 letterPos = barStart + Vector3.right * (i * 1.25f);
-            Gizmos.color = collectedLetters[i] ? Color.green : Color.red;
-            Gizmos.DrawWireSphere(letterPos, 0.2f);
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        #if UNITY_EDITOR
-        // Show collection status
-        if (Application.isPlaying)
-        {
-            string status = "B O N U S\n";
-            for (int i = 0; i < 5; i++)
+            if (bonusLetters[i] != null)
             {
-                status += collectedLetters[i] ? "✓ " : "✗ ";
+                bonusLetters[i].Collect();
             }
-            
-            UnityEditor.Handles.Label(
-                transform.position + Vector3.up * 4f,
-                status
-            );
         }
-        #endif
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 }

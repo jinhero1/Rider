@@ -206,6 +206,25 @@ public class PrefabShowcaseManager : MonoBehaviour
             bikeController.ResetBike();
         }
         
+        // Reset game state
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.currentState = GameState.Playing;
+        }
+        
+        // Reset FinishLine if it exists in scene (not in Track Prefab)
+        FinishLine finishLine = FindFirstObjectByType<FinishLine>();
+        if (finishLine != null)
+        {
+            finishLine.ResetFinishLine();
+        }
+        
+        // Refresh BONUS letters (find letters in new Track)
+        if (BonusLetterManager.Instance != null)
+        {
+            BonusLetterManager.Instance.RefreshBonusLetters();
+        }
+        
         // Show track UI
         ShowTrackUI(track);
         
@@ -252,6 +271,25 @@ public class PrefabShowcaseManager : MonoBehaviour
         {
             bikeController.transform.position = track.SpawnPosition;
             bikeController.ResetBike();
+        }
+        
+        // Reset game state
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.currentState = GameState.Playing;
+        }
+        
+        // Reset FinishLine if it exists in scene (not in Track Prefab)
+        FinishLine finishLine = FindFirstObjectByType<FinishLine>();
+        if (finishLine != null)
+        {
+            finishLine.ResetFinishLine();
+        }
+        
+        // Refresh BONUS letters (find letters in new Track)
+        if (BonusLetterManager.Instance != null)
+        {
+            BonusLetterManager.Instance.RefreshBonusLetters();
         }
         
         // Wait a frame for physics to settle
@@ -365,7 +403,7 @@ public class PrefabShowcaseManager : MonoBehaviour
     /// </summary>
     private void CreateTransitionPanel()
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindObjectOfType<Canvas>();
         if (canvas == null)
         {
             Debug.LogWarning("[PrefabShowcaseManager] No Canvas found, cannot create transition panel");

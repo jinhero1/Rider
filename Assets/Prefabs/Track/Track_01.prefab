@@ -252,19 +252,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f438ecf6d93644e9784faad6ab8b8223, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  letterType: 2
-  displayText: 
-  spriteRenderer: {fileID: 0}
-  letterColor: {r: 1, g: 1, b: 1, a: 1}
-  rotationSpeed: 0
-  bobSpeed: 2
-  bobHeight: 0.15
-  scaleAnimation: 0.1
-  isCollected: 0
+  letter: 2
   playerTag: Player
-  collectEffectPrefab: {fileID: 0}
+  spriteRenderer: {fileID: 0}
+  normalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  collectedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  collectEffect: {fileID: 0}
   collectSound: {fileID: 0}
   soundVolume: 1
+  rotateAnimation: 1
+  rotationSpeed: 0
+  floatAnimation: 1
+  floatSpeed: 2
+  floatAmount: 0.3
   showDebug: 0
 --- !u!58 &6867223303948764048
 CircleCollider2D:
@@ -403,19 +403,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f438ecf6d93644e9784faad6ab8b8223, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  letterType: 4
-  displayText: 
-  spriteRenderer: {fileID: 0}
-  letterColor: {r: 1, g: 1, b: 1, a: 1}
-  rotationSpeed: 0
-  bobSpeed: 2
-  bobHeight: 0.15
-  scaleAnimation: 0.1
-  isCollected: 0
+  letter: 4
   playerTag: Player
-  collectEffectPrefab: {fileID: 0}
+  spriteRenderer: {fileID: 0}
+  normalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  collectedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  collectEffect: {fileID: 0}
   collectSound: {fileID: 0}
   soundVolume: 1
+  rotateAnimation: 1
+  rotationSpeed: 0
+  floatAnimation: 1
+  floatSpeed: 2
+  floatAmount: 0.3
   showDebug: 0
 --- !u!58 &7983713662410930152
 CircleCollider2D:
@@ -554,19 +554,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f438ecf6d93644e9784faad6ab8b8223, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  letterType: 1
-  displayText: 
-  spriteRenderer: {fileID: 0}
-  letterColor: {r: 1, g: 1, b: 1, a: 1}
-  rotationSpeed: 0
-  bobSpeed: 2
-  bobHeight: 0.15
-  scaleAnimation: 0.1
-  isCollected: 0
+  letter: 1
   playerTag: Player
-  collectEffectPrefab: {fileID: 0}
+  spriteRenderer: {fileID: 0}
+  normalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  collectedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  collectEffect: {fileID: 0}
   collectSound: {fileID: 0}
   soundVolume: 1
+  rotateAnimation: 1
+  rotationSpeed: 0
+  floatAnimation: 1
+  floatSpeed: 2
+  floatAmount: 0.3
   showDebug: 0
 --- !u!58 &6840411242706557222
 CircleCollider2D:
@@ -744,19 +744,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f438ecf6d93644e9784faad6ab8b8223, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  letterType: 0
-  displayText: 
-  spriteRenderer: {fileID: 0}
-  letterColor: {r: 1, g: 1, b: 1, a: 1}
-  rotationSpeed: 0
-  bobSpeed: 2
-  bobHeight: 0.15
-  scaleAnimation: 0.1
-  isCollected: 0
+  letter: 0
   playerTag: Player
-  collectEffectPrefab: {fileID: 0}
+  spriteRenderer: {fileID: 0}
+  normalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  collectedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  collectEffect: {fileID: 0}
   collectSound: {fileID: 0}
   soundVolume: 1
+  rotateAnimation: 1
+  rotationSpeed: 0
+  floatAnimation: 1
+  floatSpeed: 2
+  floatAmount: 0.3
   showDebug: 0
 --- !u!58 &2831611158260577619
 CircleCollider2D:
@@ -1177,19 +1177,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f438ecf6d93644e9784faad6ab8b8223, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  letterType: 3
-  displayText: 
-  spriteRenderer: {fileID: 0}
-  letterColor: {r: 1, g: 1, b: 1, a: 1}
-  rotationSpeed: 0
-  bobSpeed: 2
-  bobHeight: 0.15
-  scaleAnimation: 0.1
-  isCollected: 0
+  letter: 3
   playerTag: Player
-  collectEffectPrefab: {fileID: 0}
+  spriteRenderer: {fileID: 0}
+  normalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  collectedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  collectEffect: {fileID: 0}
   collectSound: {fileID: 0}
   soundVolume: 1
+  rotateAnimation: 1
+  rotationSpeed: 0
+  floatAnimation: 1
+  floatSpeed: 2
+  floatAmount: 0.3
   showDebug: 0
 --- !u!58 &4015744519489331203
 CircleCollider2D:

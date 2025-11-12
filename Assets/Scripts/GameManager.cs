@@ -138,11 +138,16 @@ public class GameManager : MonoBehaviour
             BonusLetterManager.Instance.ShouldShowTreasureChest())
         {
             Debug.Log("[GameManager] All BONUS letters collected! Showing treasure chest first...");
-            
+
             // Show treasure chest, then show level result
             if (uiManager != null)
             {
                 uiManager.ShowTreasureChestThenResult(highScore);
+            }
+            
+            if (BonusLetterManager.Instance != null)
+            {
+                BonusLetterManager.Instance.FullReset();
             }
         }
         else

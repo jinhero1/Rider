@@ -217,12 +217,6 @@ public class TreasureChestPanel : MonoBehaviour
             Debug.Log("[TreasureChestPanel] Continue button clicked");
         }
         
-        // Mark treasure chest as shown
-        if (BonusLetterManager.Instance != null)
-        {
-            BonusLetterManager.Instance.SetTreasureChestShown(true);
-        }
-        
         // Hide panel
         HidePanel();
         

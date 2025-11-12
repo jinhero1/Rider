@@ -1,108 +1,90 @@
 using UnityEngine;
 
 /// <summary>
-/// Individual bonus letter collectible (B, O, N, U, S)
+/// Individual BONUS letter collectible
 /// </summary>
+[RequireComponent(typeof(Collider2D))]
 public class BonusLetter : MonoBehaviour
 {
     [Header("Letter Settings")]
-    [SerializeField] private BonusLetterType letterType;
-    [SerializeField] private string displayText; // "B", "O", "N", "U", "S"
-    
-    [Header("Visual Settings")]
-    [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Color letterColor = new Color(1f, 0.84f, 0f); // Gold color
-    [SerializeField] private float rotationSpeed = 80f;
-    [SerializeField] private float bobSpeed = 2f;
-    [SerializeField] private float bobHeight = 0.15f;
-    [SerializeField] private float scaleAnimation = 0.1f;
-    
-    [Header("Collection Settings")]
-    [SerializeField] private bool isCollected = false;
+    [SerializeField] private LetterType letter = LetterType.B;
     [SerializeField] private string playerTag = "Player";
     
+    [Header("Visual")]
+    [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private Color normalColor = Color.yellow;
+    [SerializeField] private Color collectedColor = Color.gray;
+    
     [Header("Effects")]
-    [SerializeField] private GameObject collectEffectPrefab;
+    [SerializeField] private GameObject collectEffect;
     [SerializeField] private AudioClip collectSound;
     [SerializeField] private float soundVolume = 1f;
+    
+    [Header("Animation")]
+    [SerializeField] private bool rotateAnimation = true;
+    [SerializeField] private float rotationSpeed = 50f;
+    [SerializeField] private bool floatAnimation = true;
+    [SerializeField] private float floatSpeed = 2f;
+    [SerializeField] private float floatAmount = 0.3f;
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = false;
     
+    private bool isCollected = false;
     private Vector3 startPosition;
-    private Collider2D myCollider;
-    private float animationTimer = 0f;
+    private float floatTimer = 0f;
+
+    public enum LetterType
+    {
+        B = 0,
+        O = 1,
+        N = 2,
+        U = 3,
+        S = 4
+    }
 
     void Start()
     {
         startPosition = transform.position;
         
-        // Get or add components
+        // Get sprite renderer if not assigned
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
         
-        if (spriteRenderer != null)
+        // Set initial color
+        if (spriteRenderer != null && !isCollected)
         {
-            spriteRenderer.color = letterColor;
+            spriteRenderer.color = normalColor;
         }
         
-        // Set display text based on letter type
-        if (string.IsNullOrEmpty(displayText))
-        {
-            displayText = letterType.ToString();
-        }
-        
-        // Validate collider
-        myCollider = GetComponent<Collider2D>();
-        if (myCollider == null)
-        {
-            Debug.LogWarning($"[BonusLetter] {gameObject.name} has no Collider2D! Adding CircleCollider2D.");
-            myCollider = gameObject.AddComponent<CircleCollider2D>();
-        }
-        
-        if (!myCollider.isTrigger)
-        {
-            myCollider.isTrigger = true;
-        }
-        
-        // Random animation offset for variety
-        animationTimer = Random.Range(0f, Mathf.PI * 2f);
-        
-        if (showDebug)
-        {
-            Debug.Log($"[BonusLetter] {letterType} initialized at {transform.position}");
-        }
+        // Random float offset
+        floatTimer = Random.Range(0f, Mathf.PI * 2f);
     }
 
     void Update()
     {
         if (isCollected) return;
         
-        animationTimer += Time.deltaTime;
-        
         // Rotation animation
-        transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
+        if (rotateAnimation)
+        {
+            transform.Rotate(Vector3.forward, rotationSpeed * Time.deltaTime);
+        }
         
-        // Bobbing animation
-        float newY = startPosition.y + Mathf.Sin(animationTimer * bobSpeed) * bobHeight;
-        
-        // Scale pulse animation
-        float scale = 1f + Mathf.Sin(animationTimer * 3f) * scaleAnimation;
-        
-        transform.position = new Vector3(transform.position.x, newY, transform.position.z);
-        transform.localScale = Vector3.one * scale;
+        // Float animation
+        if (floatAnimation)
+        {
+            floatTimer += Time.deltaTime * floatSpeed;
+            float offset = Mathf.Sin(floatTimer) * floatAmount;
+            transform.position = startPosition + Vector3.up * offset;
+        }
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
         if (isCollected) return;
-        
-        if (showDebug)
-        {
-            Debug.Log($"[BonusLetter] Trigger entered by: {other.gameObject.name} (Tag: {other.tag})");
-        }
         
         if (other.CompareTag(playerTag))
         {
@@ -110,7 +92,10 @@ public class BonusLetter : MonoBehaviour
         }
     }
 
-    private void Collect()
+    /// <summary>
+    /// Collect this letter
+    /// </summary>
+    public void Collect()
     {
         if (isCollected) return;
         
@@ -118,32 +103,64 @@ public class BonusLetter : MonoBehaviour
         
         if (showDebug)
         {
-            Debug.Log($"[BonusLetter] ★ {letterType} collected!");
-        }
-        
-        // Notify the manager
-        if (BonusLetterManager.Instance != null)
-        {
-            BonusLetterManager.Instance.OnLetterCollected(this);
-        }
-        else
-        {
-            Debug.LogWarning("[BonusLetter] BonusLetterManager.Instance is null!");
+            Debug.Log($"[BonusLetter] {letter} collected!");
         }
         
         // Play effects
         PlayCollectEffects();
         
+        // Change visual
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = collectedColor;
+        }
+        
+        // Notify manager
+        if (BonusLetterManager.Instance != null)
+        {
+            BonusLetterManager.Instance.OnLetterCollected(this);
+        }
+        
         // Hide the letter
         gameObject.SetActive(false);
     }
 
+    /// <summary>
+    /// Set collected status without notifying manager (for restore)
+    /// </summary>
+    public void SetCollectedWithoutNotify(bool collected)
+    {
+        isCollected = collected;
+        
+        if (collected)
+        {
+            // Hide and change color
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = collectedColor;
+            }
+            gameObject.SetActive(false);
+        }
+        else
+        {
+            // Show and restore color
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = normalColor;
+            }
+            gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// Play collection effects
+    /// </summary>
     private void PlayCollectEffects()
     {
-        // Spawn particle effect
-        if (collectEffectPrefab != null)
+        // Spawn effect
+        if (collectEffect != null)
         {
-            GameObject effect = Instantiate(collectEffectPrefab, transform.position, Quaternion.identity);
+            GameObject effect = Instantiate(collectEffect, transform.position, Quaternion.identity);
             Destroy(effect, 2f);
         }
         
@@ -152,97 +169,110 @@ public class BonusLetter : MonoBehaviour
         {
             AudioSource.PlayClipAtPoint(collectSound, transform.position, soundVolume);
         }
-        
-        // Camera shake
-        if (CameraShake.Instance != null)
-        {
-            CameraShake.Instance.Shake(0.15f, 0.15f);
-        }
     }
 
+    /// <summary>
+    /// Reset letter (make it reappear if not collected)
+    /// </summary>
     public void ResetLetter()
     {
-        isCollected = false;
-        gameObject.SetActive(true);
-        transform.position = startPosition;
-        transform.rotation = Quaternion.identity;
-        transform.localScale = Vector3.one;
-        animationTimer = Random.Range(0f, Mathf.PI * 2f);
+        if (!isCollected)
+        {
+            // If not collected, just make sure it's visible
+            gameObject.SetActive(true);
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = normalColor;
+            }
+        }
+        // If collected, stay hidden (collected status persists)
         
         if (showDebug)
         {
-            Debug.Log($"[BonusLetter] {letterType} reset");
+            Debug.Log($"[BonusLetter] {letter} reset. Collected: {isCollected}");
         }
     }
 
+    /// <summary>
+    /// Fully reset letter (uncollect)
+    /// </summary>
+    public void FullReset()
+    {
+        isCollected = false;
+        gameObject.SetActive(true);
+        
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = normalColor;
+        }
+        
+        transform.position = startPosition;
+        floatTimer = Random.Range(0f, Mathf.PI * 2f);
+        
+        if (showDebug)
+        {
+            Debug.Log($"[BonusLetter] {letter} fully reset");
+        }
+    }
+
+    /// <summary>
+    /// Get letter index (0-4 for B, O, N, U, S)
+    /// </summary>
+    public int GetLetterIndex()
+    {
+        return (int)letter;
+    }
+
+    /// <summary>
+    /// Get letter name
+    /// </summary>
+    public string GetLetterName()
+    {
+        return letter.ToString();
+    }
+
+    /// <summary>
+    /// Check if collected
+    /// </summary>
     public bool IsCollected()
     {
         return isCollected;
     }
 
-    public BonusLetterType GetLetterType()
+    // Manual test from Inspector
+    [ContextMenu("Collect Letter")]
+    public void TestCollect()
     {
-        return letterType;
+        Collect();
     }
 
-    public string GetDisplayText()
+    [ContextMenu("Reset Letter")]
+    public void TestReset()
     {
-        return displayText;
+        ResetLetter();
+    }
+
+    [ContextMenu("Full Reset")]
+    public void TestFullReset()
+    {
+        FullReset();
     }
 
     // Visualize in Scene view
     void OnDrawGizmos()
     {
-        if (Application.isPlaying && isCollected)
-        {
-            return;
-        }
-        
-        // Draw letter indicator
-        Gizmos.color = letterColor;
-        
-        Vector3 pos = Application.isPlaying ? transform.position : transform.position;
-        float size = 0.4f;
-        
-        // Draw box
-        Gizmos.DrawWireCube(pos, Vector3.one * size);
-        
-        // Draw trigger radius
-        Collider2D col = GetComponent<Collider2D>();
-        if (col != null)
-        {
-            Gizmos.color = new Color(1f, 0.84f, 0f, 0.3f);
-            if (col is CircleCollider2D circle)
-            {
-                Gizmos.DrawWireSphere(pos, circle.radius);
-            }
-            else if (col is BoxCollider2D box)
-            {
-                Gizmos.DrawWireCube(pos, box.size);
-            }
-        }
+        Gizmos.color = isCollected ? Color.gray : Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, 0.5f);
     }
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, 1f);
-        
-        // Draw letter type label in scene view
+        // Draw letter text
         #if UNITY_EDITOR
         UnityEditor.Handles.Label(
-            transform.position + Vector3.up * 1.5f,
-            $"{letterType}"
+            transform.position + Vector3.up * 1f,
+            $"[{letter}]"
         );
         #endif
     }
-}
-
-public enum BonusLetterType
-{
-    B = 0,
-    O = 1,
-    N = 2,
-    U = 3,
-    S = 4
 }

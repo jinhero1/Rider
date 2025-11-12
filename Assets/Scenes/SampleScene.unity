@@ -1109,12 +1109,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d95a450a5521b4a0ebcee4a4403092ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  allLetters: []
+  bonusLetters:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   autoFindLetters: 1
-  collectedLetters: 0000000000
+  collectedStatus: 0000000000
   totalCollected: 0
-  allLettersCollected: 0
-  treasureChestShown: 0
+  treasureChestPoints: 100
+  treasureUnlocked: 0
+  uiManager: {fileID: 0}
+  supportDynamicTracks: 1
+  hideUIWhenNoLetters: 1
   showDebug: 1
 --- !u!4 &323559083
 Transform:
@@ -1359,7 +1367,7 @@ MonoBehaviour:
   currentSpeed: 0
   detectBothDirections: 1
   flipThreshold: 320
-  showFlipDebug: 1
+  showFlipDebug: 0
   trackDistance: 1
   distanceMultiplier: 1
 --- !u!1 &368028446
