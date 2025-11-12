@@ -310,6 +310,9 @@ public class BikeController : MonoBehaviour, IPlayerController
                 CrashObject = gameObject
             });
         }
+        
+        // Hide player object
+        gameObject.SetActive(false);
 
         Debug.Log("[BikeController] Player crashed!");
     }

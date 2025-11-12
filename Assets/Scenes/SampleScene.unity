@@ -3064,9 +3064,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1270024513}
-  - component: {fileID: 1270024514}
+  - component: {fileID: 1270024515}
   m_Layer: 0
-  m_Name: Service
+  m_Name: GameCoordinator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3087,7 +3087,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1270024514
+--- !u!114 &1270024515
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3096,11 +3096,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 1270024512}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: daf6a845272ac4cfa8603639f0d06c51, type: 3}
+  m_Script: {fileID: 11500000, guid: fc5fda6b5e94a4123892efbe4c6f5564, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  autoFindCollectibles: 1
-  showDebug: 1
+  bikeController: {fileID: 361318606}
+  startPosition: {x: 0, y: 0, z: 0}
+  crashEffectPrefab: {fileID: 6588813807815463331, guid: d3dbe394f16bb400dac673060c71661e, type: 3}
+  flipEffectPrefab: {fileID: 8762901306220990651, guid: 7adfaa548bc464cb5be047ebce5b3815, type: 3}
+  showDebugLogs: 1
 --- !u!1 &1335407249
 GameObject:
   m_ObjectHideFlags: 0
@@ -3368,6 +3371,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1443683246}
   - component: {fileID: 1443683247}
+  - component: {fileID: 1443683248}
   m_Layer: 0
   m_Name: GameBootstrap
   m_TagString: Untagged
@@ -3402,6 +3406,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38c8cb7d339d9417a889276d693e88a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1443683248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443683245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daf6a845272ac4cfa8603639f0d06c51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  autoFindCollectibles: 1
+  showDebug: 1
 --- !u!1 &1516295227
 GameObject:
   m_ObjectHideFlags: 0
