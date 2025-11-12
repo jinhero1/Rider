@@ -403,7 +403,7 @@ public class PrefabShowcaseManager : MonoBehaviour
     /// </summary>
     private void CreateTransitionPanel()
     {
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             Debug.LogWarning("[PrefabShowcaseManager] No Canvas found, cannot create transition panel");

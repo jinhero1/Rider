@@ -29,8 +29,6 @@ public class BonusLetterManager : MonoBehaviour
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
-    
-    private bool isInitialized = false;
 
     void Awake()
     {
@@ -62,8 +60,6 @@ public class BonusLetterManager : MonoBehaviour
         
         // Initial scan for letters
         RefreshBonusLetters();
-        
-        isInitialized = true;
         
         if (showDebug)
         {
@@ -114,7 +110,7 @@ public class BonusLetterManager : MonoBehaviour
     /// </summary>
     private void FindAllBonusLetters()
     {
-        BonusLetter[] foundLetters = FindObjectsOfType<BonusLetter>();
+        BonusLetter[] foundLetters = FindObjectsByType<BonusLetter>(FindObjectsSortMode.None);
         
         if (foundLetters.Length == 0)
         {

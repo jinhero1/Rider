@@ -22,6 +22,7 @@ public class UIManager : MonoBehaviour
 
     [Header("Completion Screen")]
     [SerializeField] private GameObject levelResultPanel;
+    
     [SerializeField] private TextMeshProUGUI finalScoreText;
     [SerializeField] private Button nextButton;
     [SerializeField] private TreasureChestPanel treasureChestPanel;
