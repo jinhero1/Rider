@@ -167,6 +167,8 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
 
     private void OnLevelCompleted(LevelCompletedEvent evt)
     {
+        if (!IsWordComplete) return;
+
         if (showDebug)
         {
             Debug.Log("[BonusLetterService] Level completed");

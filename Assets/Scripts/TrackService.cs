@@ -156,7 +156,7 @@ public class TrackService : MonoBehaviour, ITrackService
         {
             if (showDebug)
             {
-                Debug.LogWarning("[TrackService] Already transitioning");
+                //Debug.LogWarning("[TrackService] Already transitioning");
             }
             return;
         }
@@ -240,7 +240,6 @@ public class TrackService : MonoBehaviour, ITrackService
         DestroyCurrentTrack();
         InstantiateNewTrack(track);
         ResetBikePosition(track);
-        ResetGameState();
         RefreshTrackContent();
         PublishTrackLoadedEvent(track);
         PreloadNextTrackIfEnabled();
@@ -266,7 +265,6 @@ public class TrackService : MonoBehaviour, ITrackService
         
         InstantiateNewTrack(track);
         ResetBikePosition(track);
-        ResetGameState();
         RefreshTrackContent();
         
         yield return null;
@@ -317,11 +315,6 @@ public class TrackService : MonoBehaviour, ITrackService
             bikeController.transform.position = track.SpawnPosition;
             bikeController.ResetPlayer();
         }
-    }
-
-    private void ResetGameState()
-    {
-        gameStateService?.ChangeState(GameState.Playing);
     }
 
     private void RefreshTrackContent()

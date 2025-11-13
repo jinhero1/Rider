@@ -87,7 +87,7 @@ public class GameStateService : IGameStateService
     {
         if (currentState == newState)
         {
-            Debug.LogWarning($"[GameStateService] Already in state: {newState}");
+            //Debug.LogWarning($"[GameStateService] Already in state: {newState}");
             return;
         }
 

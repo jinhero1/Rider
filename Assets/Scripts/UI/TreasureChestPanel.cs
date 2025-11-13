@@ -100,7 +100,7 @@ public class TreasureChestPanel : MonoBehaviour
     {
         if (showDebug)
         {
-            Debug.Log($"[TreasureChestPanel] Showing chest with reward: {evt.RewardPoints}");
+            //Debug.Log($"[TreasureChestPanel] Showing chest with reward: {evt.RewardPoints}");
         }
 
         ShowTreasureChest(() => {
