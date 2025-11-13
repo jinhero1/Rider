@@ -151,6 +151,14 @@ public struct BonusWordCompletedEvent
 }
 
 /// <summary>
+/// Event fired to update BONUS letter collected status
+/// </summary>
+public struct BonusLetterStatusEvent
+{
+    public bool[] CollectedStatus;
+}
+
+/// <summary>
 /// Event fired when score changes
 /// </summary>
 public struct ScoreChangedEvent

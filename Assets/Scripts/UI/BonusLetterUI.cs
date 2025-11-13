@@ -56,6 +56,7 @@ public class BonusLetterUI : MonoBehaviour
 
         eventSystem.Subscribe<BonusLetterCollectedEvent>(OnLetterCollected);
         eventSystem.Subscribe<BonusWordCompletedEvent>(OnWordCompleted);
+        eventSystem.Subscribe<BonusLetterStatusEvent>(OnBonusLetterStatus);
     }
 
     private void UnsubscribeFromEvents()
@@ -64,6 +65,7 @@ public class BonusLetterUI : MonoBehaviour
 
         eventSystem.Unsubscribe<BonusLetterCollectedEvent>(OnLetterCollected);
         eventSystem.Unsubscribe<BonusWordCompletedEvent>(OnWordCompleted);
+        eventSystem.Unsubscribe<BonusLetterStatusEvent>(OnBonusLetterStatus);
     }
 
     private void InitializeLetterDisplay()
@@ -100,6 +102,16 @@ public class BonusLetterUI : MonoBehaviour
         }
 
         StartCoroutine(PlayWordCompletionAnimation());
+    }
+
+    private void OnBonusLetterStatus(BonusLetterStatusEvent evt)
+    {
+        if (showDebugLogs)
+        {
+            Debug.Log("[BonusLetterUI] Updating BONUS letter status");
+        }
+
+        UpdateAllLetters(evt.CollectedStatus);
     }
 
     #endregion

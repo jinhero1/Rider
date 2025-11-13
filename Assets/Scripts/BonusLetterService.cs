@@ -73,6 +73,7 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
         eventSystem.Subscribe<BonusLetterCollectedEvent>(OnLetterCollected);
         eventSystem.Subscribe<TrackLoadedEvent>(OnTrackLoaded);
         eventSystem.Subscribe<LevelRestartRequestedEvent>(OnLevelRestart);
+        eventSystem.Subscribe<LevelCompletedEvent>(OnLevelCompleted);
     }
 
     private void UnsubscribeFromEvents()
@@ -82,6 +83,7 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
         eventSystem.Unsubscribe<BonusLetterCollectedEvent>(OnLetterCollected);
         eventSystem.Unsubscribe<TrackLoadedEvent>(OnTrackLoaded);
         eventSystem.Unsubscribe<LevelRestartRequestedEvent>(OnLevelRestart);
+        eventSystem.Unsubscribe<LevelCompletedEvent>(OnLevelCompleted);
     }
 
     #endregion
@@ -136,19 +138,10 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
             Debug.Log($"[BonusLetterService] ✨ BONUS WORD COMPLETED! Treasure: {treasureChestPoints}");
         }
         
-        // Award points via score service
-        scoreService?.AddScore(treasureChestPoints);
-        
         // Publish event
         eventSystem?.Publish(new BonusWordCompletedEvent
         {
             TreasurePoints = treasureChestPoints
-        });
-        
-        // Publish treasure chest event
-        eventSystem?.Publish(new ShowTreasureChestEvent
-        {
-            RewardPoints = treasureChestPoints
         });
     }
 
@@ -170,6 +163,21 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
         }
 
         ResetLetters();
+    }
+
+    private void OnLevelCompleted(LevelCompletedEvent evt)
+    {
+        if (showDebug)
+        {
+            Debug.Log("[BonusLetterService] Level completed");
+        }
+        
+        // Publish treasure chest event
+        eventSystem?.Publish(new ShowTreasureChestEvent
+        {
+            RewardPoints = treasureChestPoints
+        });
+        FullReset();
     }
 
     #endregion
@@ -300,11 +308,17 @@ public class BonusLetterService : MonoBehaviour, IBonusLetterService
         {
             letter?.FullReset();
         }
-        
+
         if (showDebug)
         {
             Debug.Log("[BonusLetterService] Full reset complete");
         }
+        
+        // Publish event
+        eventSystem?.Publish(new BonusLetterStatusEvent
+        {
+            CollectedStatus = collectedStatus
+        });
     }
 
     #endregion

@@ -209,7 +209,6 @@ public class BonusLetter : MonoBehaviour
     public void FullReset()
     {
         isCollected = false;
-        gameObject.SetActive(true);
         
         if (spriteRenderer != null)
         {
