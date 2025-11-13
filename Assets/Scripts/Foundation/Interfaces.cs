@@ -1,12 +1,5 @@
 using UnityEngine;
 
-public enum GameState
-{
-    Playing,
-    Crashed,
-    Completed
-}
-
 /// <summary>
 /// Interface for score management
 /// Follows Interface Segregation Principle - focused on score operations only
@@ -15,7 +8,7 @@ public interface IScoreService
 {
     int CurrentScore { get; }
     int HighScore { get; }
-
+    
     void AddScore(int points);
     void ResetScore();
     void SaveHighScore();
@@ -98,9 +91,12 @@ public interface ITrackService
     int CurrentTrackIndex { get; }
     int TotalTracks { get; }
     
-    void LoadTrack(int trackIndex);
+    void LoadTrack(int trackIndex, bool useTransition = true);
     void LoadNextTrack();
     void LoadPreviousTrack();
+    TrackData GetCurrentTrack();
+    bool IsLastTrack();
+    bool IsFirstTrack();
 }
 
 /// <summary>

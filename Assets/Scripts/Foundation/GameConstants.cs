@@ -148,3 +148,10 @@ public static class GameConstants
         public static readonly Color BOOST_PLATFORM_GREEN = Color.green;
     }
 }
+
+public enum GameState
+{
+    Playing,
+    Crashed,
+    Completed
+}
