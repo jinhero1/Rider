@@ -3,11 +3,10 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 
-/// <summary>
-/// UI component for displaying showcase level information
-/// </summary>
 public class ShowcaseLevelUI : MonoBehaviour
 {
+    private GameEventSystem eventSystem;
+
     [Header("Level Info Display")]
     [SerializeField] private GameObject levelInfoPanel;
     [SerializeField] private TextMeshProUGUI levelTitleText;
@@ -27,12 +26,12 @@ public class ShowcaseLevelUI : MonoBehaviour
     
     [Header("Animation")]
     [SerializeField] private bool animateLevelInfo = true;
-    [SerializeField] private float fadeInDuration = 0.5f;
-    [SerializeField] private float fadeOutDuration = 0.5f;
+    [SerializeField] private float fadeInDuration = GameConstants.UI.LEVEL_INFO_FADE_IN_DURATION;
+    [SerializeField] private float fadeOutDuration = GameConstants.UI.LEVEL_INFO_FADE_OUT_DURATION;
     
     [Header("Auto Hide")]
     [SerializeField] private bool autoHideLevelInfo = true;
-    [SerializeField] private float autoHideDelay = 3f;
+    [SerializeField] private float autoHideDelay = GameConstants.UI.LEVEL_INFO_AUTO_HIDE_DELAY;
     
     [Header("Debug")]
     [SerializeField] private bool showDebug = true;
@@ -40,9 +39,38 @@ public class ShowcaseLevelUI : MonoBehaviour
     private CanvasGroup levelInfoCanvasGroup;
     private Coroutine autoHideCoroutine;
 
-    void Start()
+    #region Initialization
+
+    private void Awake()
     {
-        // Setup canvas group for fading
+        InitializeServices();
+        SetupCanvasGroup();
+    }
+
+    private void Start()
+    {
+        SubscribeToEvents();
+        SetupButtons();
+        HideLevelInfo();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromEvents();
+    }
+
+    private void InitializeServices()
+    {
+        eventSystem = ServiceLocator.Instance.Get<GameEventSystem>();
+
+        if (eventSystem == null)
+        {
+            Debug.LogError("[ShowcaseLevelUI] GameEventSystem not found!");
+        }
+    }
+
+    private void SetupCanvasGroup()
+    {
         if (levelInfoPanel != null)
         {
             levelInfoCanvasGroup = levelInfoPanel.GetComponent<CanvasGroup>();
@@ -51,100 +79,69 @@ public class ShowcaseLevelUI : MonoBehaviour
                 levelInfoCanvasGroup = levelInfoPanel.AddComponent<CanvasGroup>();
             }
         }
-        
-        // Setup button listeners
+    }
+
+    private void SubscribeToEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Subscribe<TrackLoadedEvent>(OnTrackLoaded);
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        if (eventSystem == null) return;
+
+        eventSystem.Unsubscribe<TrackLoadedEvent>(OnTrackLoaded);
+    }
+
+    private void SetupButtons()
+    {
         if (nextLevelButton != null)
         {
+            nextLevelButton.onClick.RemoveAllListeners();
             nextLevelButton.onClick.AddListener(OnNextButtonClicked);
         }
         
         if (previousLevelButton != null)
         {
+            previousLevelButton.onClick.RemoveAllListeners();
             previousLevelButton.onClick.AddListener(OnPreviousButtonClicked);
         }
         
-        // Hide level info initially
-        if (levelInfoPanel != null)
-        {
-            levelInfoPanel.SetActive(false);
-        }
-        
-        // Update navigation buttons
         UpdateNavigationButtons();
-        
-        if (showDebug)
-        {
-            Debug.Log("[ShowcaseLevelUI] Initialized");
-        }
     }
 
-    /// <summary>
-    /// Show level information
-    /// </summary>
-    public void ShowLevelInfo(LevelData level, float displayDuration = 3f)
+    #endregion
+
+    #region Event Handlers
+
+    private void OnTrackLoaded(TrackLoadedEvent evt)
     {
-        if (level == null) return;
-        
-        // Update UI elements
-        if (levelTitleText != null)
-        {
-            levelTitleText.text = level.LevelTitle;
-        }
-        
-        if (levelNumberText != null && ShowcaseLevelManager.Instance != null)
-        {
-            int current = ShowcaseLevelManager.Instance.GetCurrentLevelIndex() + 1;
-            int total = ShowcaseLevelManager.Instance.GetTotalLevels();
-            levelNumberText.text = $"Level {current} / {total}";
-        }
-        
-        if (levelIconImage != null && level.LevelIcon != null)
-        {
-            levelIconImage.sprite = level.LevelIcon;
-            levelIconImage.color = level.LevelColor;
-        }
-        
-        // Update progress
-        UpdateProgress();
-        
-        // Update navigation buttons
-        UpdateNavigationButtons();
-        
-        // Show panel
-        if (levelInfoPanel != null)
-        {
-            levelInfoPanel.SetActive(true);
-            
-            if (animateLevelInfo)
-            {
-                StartCoroutine(FadeInPanel());
-            }
-            else if (levelInfoCanvasGroup != null)
-            {
-                levelInfoCanvasGroup.alpha = 1f;
-            }
-        }
-        
-        // Auto hide
-        if (autoHideLevelInfo)
-        {
-            if (autoHideCoroutine != null)
-            {
-                StopCoroutine(autoHideCoroutine);
-            }
-            autoHideCoroutine = StartCoroutine(AutoHideLevelInfo(displayDuration));
-        }
-        
         if (showDebug)
         {
-            Debug.Log($"[ShowcaseLevelUI] Showing: {level.LevelTitle}");
+            Debug.Log($"[ShowcaseLevelUI] Track loaded: {evt.TrackTitle}");
+        }
+
+        // Get track service to get current track info
+        ITrackService trackService = ServiceLocator.Instance.Get<ITrackService>();
+        
+        if (trackService != null)
+        {
+            ShowTrackInfo(
+                evt.TrackTitle,
+                trackService.CurrentTrackIndex + 1,
+                trackService.TotalTracks,
+                autoHideDelay
+            );
         }
     }
 
-    /// <summary>
-    /// Show track information (for Prefab-based system)
-    /// </summary>
-    public void ShowTrackInfo(string title, int currentIndex, int totalTracks, float displayDuration = 3f)
+    #endregion
+
+    #region UI Display
+
+    public void ShowTrackInfo(string title, int currentIndex, int totalTracks, float displayDuration)
     {
         // Update UI elements
         if (levelTitleText != null)
@@ -157,10 +154,7 @@ public class ShowcaseLevelUI : MonoBehaviour
             levelNumberText.text = $"Level {currentIndex} / {totalTracks}";
         }
         
-        // Update progress
-        UpdateProgress();
-        
-        // Update navigation buttons
+        UpdateProgress(currentIndex, totalTracks);
         UpdateNavigationButtons();
         
         // Show panel
@@ -190,13 +184,10 @@ public class ShowcaseLevelUI : MonoBehaviour
         
         if (showDebug)
         {
-            Debug.Log($"[ShowcaseLevelUI] Showing track: {title}");
+            Debug.Log($"[ShowcaseLevelUI] Showing: {title}");
         }
     }
 
-    /// <summary>
-    /// Hide level information
-    /// </summary>
     public void HideLevelInfo()
     {
         if (animateLevelInfo)
@@ -209,68 +200,57 @@ public class ShowcaseLevelUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Update progress display
-    /// </summary>
-    private void UpdateProgress()
+    private void UpdateProgress(int current, int total)
     {
         if (!showProgress) return;
         
-        if (ShowcaseLevelManager.Instance != null)
+        if (progressText != null)
         {
-            int current = ShowcaseLevelManager.Instance.GetCurrentLevelIndex() + 1;
-            int total = ShowcaseLevelManager.Instance.GetTotalLevels();
-            
-            if (progressText != null)
-            {
-                progressText.text = $"{current} / {total}";
-            }
-            
-            if (progressSlider != null)
-            {
-                progressSlider.maxValue = total;
-                progressSlider.value = current;
-            }
+            progressText.text = $"{current} / {total}";
+        }
+        
+        if (progressSlider != null)
+        {
+            progressSlider.maxValue = total;
+            progressSlider.value = current;
         }
     }
 
-    /// <summary>
-    /// Update navigation button states
-    /// </summary>
     private void UpdateNavigationButtons()
     {
-        if (ShowcaseLevelManager.Instance == null) return;
+        ITrackService trackService = ServiceLocator.Instance.Get<ITrackService>();
+        if (trackService == null) return;
         
-        bool isLastLevel = ShowcaseLevelManager.Instance.IsLastLevel();
-        bool isFirstLevel = ShowcaseLevelManager.Instance.IsFirstLevel();
+        bool isLastTrack = trackService.IsLastTrack();
+        bool isFirstTrack = trackService.IsFirstTrack();
         
         // Update next button
         if (nextLevelButton != null)
         {
-            nextLevelButton.interactable = true; // Always enabled with circular navigation
+            nextLevelButton.interactable = true; // Always enabled with circular
         }
         
         if (nextButtonText != null)
         {
-            // Show "Restart" or "Loop" text on last level if circular
-            nextButtonText.text = isLastLevel ? "Restart" : "Next";
+            nextButtonText.text = isLastTrack ? "Restart" : "Next";
         }
         
         // Update previous button
         if (previousLevelButton != null)
         {
-            previousLevelButton.interactable = true; // Always enabled with circular navigation
+            previousLevelButton.interactable = true; // Always enabled with circular
         }
         
         if (previousButtonText != null)
         {
-            previousButtonText.text = isFirstLevel ? "Last" : "Previous";
+            previousButtonText.text = isFirstTrack ? "Last" : "Previous";
         }
     }
 
-    /// <summary>
-    /// Fade in panel
-    /// </summary>
+    #endregion
+
+    #region Animations
+
     private IEnumerator FadeInPanel()
     {
         if (levelInfoCanvasGroup == null) yield break;
@@ -288,9 +268,6 @@ public class ShowcaseLevelUI : MonoBehaviour
         levelInfoCanvasGroup.alpha = 1f;
     }
 
-    /// <summary>
-    /// Fade out panel
-    /// </summary>
     private IEnumerator FadeOutPanel()
     {
         if (levelInfoCanvasGroup == null) yield break;
@@ -313,66 +290,41 @@ public class ShowcaseLevelUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Auto hide level info after delay
-    /// </summary>
     private IEnumerator AutoHideLevelInfo(float delay)
     {
         yield return new WaitForSeconds(delay);
         HideLevelInfo();
     }
 
-    /// <summary>
-    /// Handle next button click
-    /// </summary>
+    #endregion
+
+    #region Button Handlers
+
     private void OnNextButtonClicked()
     {
-        if (ShowcaseLevelManager.Instance != null)
+        if (showDebug)
         {
-            ShowcaseLevelManager.Instance.LoadNextLevel();
-            
-            if (showDebug)
-            {
-                Debug.Log("[ShowcaseLevelUI] Next button clicked");
-            }
+            Debug.Log("[ShowcaseLevelUI] Next button clicked");
         }
+        
+        eventSystem?.Publish(new NextLevelRequestedEvent());
     }
 
-    /// <summary>
-    /// Handle previous button click
-    /// </summary>
     private void OnPreviousButtonClicked()
     {
-        if (ShowcaseLevelManager.Instance != null)
+        if (showDebug)
         {
-            ShowcaseLevelManager.Instance.LoadPreviousLevel();
-            
-            if (showDebug)
-            {
-                Debug.Log("[ShowcaseLevelUI] Previous button clicked");
-            }
+            Debug.Log("[ShowcaseLevelUI] Previous button clicked");
         }
+        
+        ITrackService trackService = ServiceLocator.Instance.Get<ITrackService>();
+        trackService?.LoadPreviousTrack();
     }
 
-    /// <summary>
-    /// Manually show level info (for inspector button)
-    /// </summary>
-    [ContextMenu("Show Current Level Info")]
-    public void ShowCurrentLevelInfo()
-    {
-        if (ShowcaseLevelManager.Instance != null)
-        {
-            LevelData currentLevel = ShowcaseLevelManager.Instance.GetCurrentLevel();
-            if (currentLevel != null)
-            {
-                ShowLevelInfo(currentLevel, autoHideDelay);
-            }
-        }
-    }
+    #endregion
 
-    /// <summary>
-    /// Toggle level info visibility
-    /// </summary>
+    #region Public API
+
     public void ToggleLevelInfo()
     {
         if (levelInfoPanel != null)
@@ -387,4 +339,40 @@ public class ShowcaseLevelUI : MonoBehaviour
             }
         }
     }
+
+    private void ShowCurrentLevelInfo()
+    {
+        ITrackService trackService = ServiceLocator.Instance.Get<ITrackService>();
+        if (trackService != null)
+        {
+            TrackData currentTrack = trackService.GetCurrentTrack();
+            if (currentTrack != null)
+            {
+                ShowTrackInfo(
+                    currentTrack.TrackTitle,
+                    trackService.CurrentTrackIndex + 1,
+                    trackService.TotalTracks,
+                    autoHideDelay
+                );
+            }
+        }
+    }
+
+    #endregion
+
+    #region Debug
+
+    [ContextMenu("Show Current Level Info")]
+    private void DebugShowCurrentInfo()
+    {
+        ShowCurrentLevelInfo();
+    }
+
+    [ContextMenu("Toggle Level Info")]
+    private void DebugToggleInfo()
+    {
+        ToggleLevelInfo();
+    }
+
+    #endregion
 }

@@ -181,7 +181,7 @@ public struct GameStateChangedEvent
 /// </summary>
 public struct TrackLoadedEvent
 {
-    public string TrackName;
+    public string TrackTitle;
     public int TrackIndex;
     public Vector3 SpawnPosition;
 }

@@ -13,11 +13,13 @@ public class ShowcaseLevelManager : MonoBehaviour
     [SerializeField] private LevelData[] levels;
     [SerializeField] private int currentLevelIndex = 0;
     [SerializeField] private bool enableCircularNavigation = true;
-    
+
     [Header("Level Display")]
     [SerializeField] private ShowcaseLevelUI levelUI;
+    /*
     [SerializeField] private bool showLevelTitleOnStart = true;
-    [SerializeField] private float titleDisplayDuration = 3f;
+    [SerializeField] private float titleDisplayDuration = 3f;\
+    */
     
     [Header("Level Transition")]
     [SerializeField] private bool useFadeTransition = true;
@@ -218,7 +220,7 @@ public class ShowcaseLevelManager : MonoBehaviour
     {
         // Wait for scene to fully load
         yield return new WaitForSeconds(0.2f);
-        
+
         // Find UI in new scene
         if (levelUI == null)
         {
@@ -226,10 +228,12 @@ public class ShowcaseLevelManager : MonoBehaviour
         }
         
         // Show level info
+        /*
         if (levelUI != null && showLevelTitleOnStart)
         {
             levelUI.ShowLevelInfo(level, titleDisplayDuration);
         }
+        */
         
         if (showDebug)
         {

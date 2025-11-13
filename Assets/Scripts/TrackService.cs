@@ -339,7 +339,7 @@ public class TrackService : MonoBehaviour, ITrackService
 
         eventSystem.Publish(new TrackLoadedEvent
         {
-            TrackName = track.TrackName,
+            TrackTitle = track.TrackTitle,
             TrackIndex = currentTrackIndex,
             SpawnPosition = track.SpawnPosition
         });

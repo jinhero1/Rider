@@ -261,7 +261,7 @@ public class LevelService : MonoBehaviour
         // You may want to add it to LevelData or find it in the scene
         eventSystem.Publish(new TrackLoadedEvent
         {
-            TrackName = level.LevelName,
+            TrackTitle = level.LevelTitle,
             TrackIndex = currentLevelIndex,
             SpawnPosition = Vector3.zero // Find in scene or add to LevelData
         });
