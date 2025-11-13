@@ -343,6 +343,7 @@ public class TrackService : MonoBehaviour, ITrackService
             TrackIndex = currentTrackIndex,
             SpawnPosition = track.SpawnPosition
         });
+        Debug.Log("[TrackService] PublishTrackLoadedEvent");
     }
 
     #endregion

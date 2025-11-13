@@ -45,11 +45,11 @@ public class ShowcaseLevelUI : MonoBehaviour
     {
         InitializeServices();
         SetupCanvasGroup();
+        SubscribeToEvents();
     }
 
     private void Start()
     {
-        SubscribeToEvents();
         SetupButtons();
         HideLevelInfo();
     }
