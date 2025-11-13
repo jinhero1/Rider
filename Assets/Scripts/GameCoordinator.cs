@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class GameCoordinator : MonoBehaviour
@@ -31,11 +32,23 @@ public class GameCoordinator : MonoBehaviour
     {
         SubscribeToEvents();
         InitializeGame();
+        StartCoroutine(UpdateScoreLoop());
     }
 
     private void OnDestroy()
     {
         UnsubscribeFromEvents();
+    }
+
+    private IEnumerator UpdateScoreLoop()
+    {
+        while (true)
+        {
+            if (gameStateService?.CurrentState == GameState.Playing)
+                scoreService?.AddScore(bikeController.GetScore());
+
+            yield return new WaitForSeconds(GameConstants.Score.DEFAULT_UPDATE_SECONDS);
+        }
     }
 
     #region Initialization

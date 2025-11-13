@@ -350,7 +350,7 @@ public class BikeController : MonoBehaviour, IPlayerController
 
     public int GetScore()
     {
-        return distanceTracker.GetScore();
+        return (int)(rearWheel.motor.motorSpeed * distanceMultiplier);
     }
 
     #endregion
@@ -442,7 +442,7 @@ public class DistanceTracker
     {
         if (isCrashed) return;
 
-        float deltaDistance = Vector3.Distance(currentPosition, lastPosition);
+        float deltaDistance = GetDeltaDistance(currentPosition);
 
         if (currentPosition.x > lastPosition.x)
         {
@@ -450,6 +450,11 @@ public class DistanceTracker
         }
 
         lastPosition = currentPosition;
+    }
+
+    public float GetDeltaDistance(Vector3 currentPosition)
+    {
+        return Vector3.Distance(currentPosition, lastPosition);
     }
 
     public void AddBonus(int bonusPoints)

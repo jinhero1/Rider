@@ -31,7 +31,7 @@ public class ScoreService : IScoreService
             DeltaScore = points
         });
 
-        Debug.Log($"[ScoreService] Score: {previousScore} -> {currentScore} (+{points})");
+        //Debug.Log($"[ScoreService] Score: {previousScore} -> {currentScore} (+{points})");
     }
 
     public void ResetScore()

@@ -101,6 +101,7 @@ public static class GameConstants
     {
         public const int DEFAULT_FLIP_BONUS_POINTS = 1;
         public const float DEFAULT_DISTANCE_MULTIPLIER = 1f;
+        public const float DEFAULT_UPDATE_SECONDS = 0.1f;
         public const string HIGH_SCORE_PLAYER_PREF_KEY = "HighScore";
     }
 

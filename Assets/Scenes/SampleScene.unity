@@ -1368,7 +1368,7 @@ MonoBehaviour:
   detectBothDirections: 1
   flipThreshold: 320
   showFlipDebug: 0
-  distanceMultiplier: 1
+  distanceMultiplier: 0.1
   showDebugInfo: 0
 --- !u!1 &384867407
 GameObject:
