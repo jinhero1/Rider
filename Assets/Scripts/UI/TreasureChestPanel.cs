@@ -291,10 +291,6 @@ public class TreasureChestPanel : MonoBehaviour
             audioService?.PlaySound(rewardSound, Camera.main.transform.position);
         }
         
-        // Camera shake
-        ICameraService cameraService = ServiceLocator.Instance.Get<ICameraService>();
-        cameraService?.Shake(0.3f, 0.3f);
-        
         if (showDebug)
         {
             Debug.Log("[TreasureChestPanel] Rewards revealed!");
