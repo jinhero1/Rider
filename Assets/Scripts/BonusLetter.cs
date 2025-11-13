@@ -12,8 +12,6 @@ public class BonusLetter : MonoBehaviour
     
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Color normalColor = GameConstants.Colors.BONUS_YELLOW;
-    [SerializeField] private Color collectedColor = GameConstants.Colors.COLLECTED_GRAY;
     
     [Header("Effects")]
     [SerializeField] private GameObject collectEffect;
@@ -57,7 +55,6 @@ public class BonusLetter : MonoBehaviour
 
     private void Start()
     {
-        InitializeVisuals();
         floatTimer = Random.Range(0f, Mathf.PI * 2f);
     }
 
@@ -80,14 +77,6 @@ public class BonusLetter : MonoBehaviour
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
-        }
-    }
-
-    private void InitializeVisuals()
-    {
-        if (spriteRenderer != null && !isCollected)
-        {
-            spriteRenderer.color = normalColor;
         }
     }
 
@@ -153,12 +142,6 @@ public class BonusLetter : MonoBehaviour
         // Play effects
         PlayCollectEffects();
         
-        // Change visual
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.color = collectedColor;
-        }
-        
         // Publish event
         PublishCollectionEvent();
         
@@ -172,18 +155,10 @@ public class BonusLetter : MonoBehaviour
         
         if (collected)
         {
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = collectedColor;
-            }
             gameObject.SetActive(false);
         }
         else
         {
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = normalColor;
-            }
             gameObject.SetActive(true);
         }
     }
@@ -194,10 +169,6 @@ public class BonusLetter : MonoBehaviour
         {
             // If not collected, just ensure it's visible
             gameObject.SetActive(true);
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = normalColor;
-            }
         }
         
         if (showDebug)
@@ -209,11 +180,6 @@ public class BonusLetter : MonoBehaviour
     public void FullReset()
     {
         isCollected = false;
-        
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.color = normalColor;
-        }
         
         transform.position = startPosition;
         floatTimer = Random.Range(0f, Mathf.PI * 2f);
