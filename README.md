@@ -27,10 +27,12 @@ This is a **prototype** derived from a *Stunt Bike Racing* experience, split int
 - Collectible Diamond
 - Bonus Treasure
 - Flip Count Score Bonus
-![Rider Feature Stages](Docs/Rider Feature Stages.mov)
+
+## Video preview
+[Rider Feature Stages](https://drive.google.com/file/d/1OrIp58XTJ-otxFCWzRmlZo1lbTxl3Mab/view?usp=share_link)
 
 ## Architecture overview
-![High-Level Dependency Diagram](Docs/High-Level Dependency Diagram.png)
+![High-Level Dependency Diagram](Docs/High-Level%20Dependency%20Diagram.png)
 
 ### Folder responsibilities
 - **Foundation**: Interfaces, constants, event system, service locator, core service implementations
@@ -62,5 +64,5 @@ Seven small stages demonstrate the features above. Each stage isolates a mechani
    - Reach Finish Line or trigger hazards to see flow
 
 ## Tests
-![Foundation unit test results](Docs/Foundation Unit Test Result.png)
+![Foundation Unit Test Results](Docs/Foundation%20Unit%20Test%20Result.png)
 
